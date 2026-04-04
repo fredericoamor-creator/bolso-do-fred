@@ -1111,6 +1111,100 @@ async function registerPeriodicSync(){if('serviceWorker' in navigator){try{const
 
 async function updateNotificacoes(){await loadNotifState();await updateLembretesList();await updateNotifHistorico();}
 
+// ===== AUTO-FILL VIA URL (Atalhos do iOS) =====
+function checkURLParams() {
+    const url = new URL(window.location.href);
+    const params = url.searchParams;
+
+    const valor = params.get('valor');
+    const tipo = params.get('tipo');
+    const descricao = params.get('desc');
+    const categoria = params.get('cat');
+    const metodo = params.get('metodo');
+
+    // Se não veio valor na URL, não faz nada
+    if (!valor) return false;
+
+    // Aguarda o usuário autenticar com PIN antes de preencher
+    const waitForAuth = () => {
+        if (!authenticated) {
+            setTimeout(waitForAuth, 500);
+            return;
+        }
+
+        // Define o tipo (gasto, receita, investimento, resgate)
+        const tipoValido = ['gasto', 'receita', 'investimento', 'resgate'].includes(tipo) ? tipo : 'gasto';
+        tipoRegistro = tipoValido;
+        document.querySelectorAll('.tipo-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector(`.tipo-btn[data-tipo="${tipoValido}"]`)?.classList.add('active');
+
+        // Preenche o valor
+        const valorNum = parseFloat(valor);
+        if (valorNum > 0) {
+            document.getElementById('input-valor').value = valorNum.toLocaleString('pt-BR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        // Preenche descrição (se veio)
+        if (descricao) {
+            document.getElementById('input-descricao').value = decodeURIComponent(descricao);
+        }
+
+        // Preenche categoria (para gastos)
+        if (categoria && tipoValido === 'gasto') {
+            const catMap = {
+                'alimentacao': 'alimentacao', 'food': 'alimentacao', 'comida': 'alimentacao',
+                'transporte': 'transporte', 'uber': 'transporte', 'transport': 'transporte',
+                'moradia': 'moradia', 'casa': 'moradia',
+                'lazer': 'lazer', 'entertainment': 'lazer',
+                'saude': 'saude', 'health': 'saude', 'farmacia': 'saude',
+                'educacao': 'educacao', 'education': 'educacao',
+                'compras': 'compras', 'shopping': 'compras',
+                'servicos': 'servicos', 'services': 'servicos',
+                'vestuario': 'vestuario', 'roupa': 'vestuario',
+                'outros': 'outros'
+            };
+            const catKey = catMap[categoria.toLowerCase()] || 'outros';
+            document.getElementById('select-categoria').value = catKey;
+        }
+
+        // Preenche método de pagamento
+        if (metodo) {
+            const metMap = {
+                'credito': 'credito', 'credit': 'credito', 'crédito': 'credito',
+                'debito': 'debito', 'debit': 'debito', 'débito': 'debito',
+                'pix': 'pix',
+                'boleto': 'boleto',
+                'dinheiro': 'dinheiro', 'cash': 'dinheiro'
+            };
+            const metKey = metMap[metodo.toLowerCase()] || 'credito';
+            metodoSelecionado = metKey;
+            document.querySelectorAll('#chips-metodo .chip').forEach(c => c.classList.remove('active'));
+            document.querySelector(`#chips-metodo .chip[data-metodo="${metKey}"]`)?.classList.add('active');
+        }
+
+        // Data = hoje
+        document.getElementById('input-data').valueAsDate = new Date();
+
+        // Atualiza visibilidade dos campos do form
+        updateFormVisibility();
+
+        // Navega direto para o formulário
+        navigateTo('screen-novo-registro');
+
+        // Toast informando que veio do atalho
+        showToast('📲 Dados preenchidos via atalho!');
+
+        // Limpa os parâmetros da URL sem recarregar a página
+        window.history.replaceState({}, '', window.location.pathname);
+    };
+
+    waitForAuth();
+    return true;
+}
+
 // ===== SERVICE WORKER =====
 function registerSW(){if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js').catch(e=>console.warn('SW:',e));}
 
@@ -1131,6 +1225,9 @@ async function init() {
     initNotificacoes();
     await initPIN();
     registerSW();
+
+    // Verifica se veio com dados via URL (Atalho do iOS)
+    checkURLParams();
 }
 
 document.addEventListener('DOMContentLoaded', init);
