@@ -1,10 +1,10 @@
 // =======================================
-// O BOLSO DO FRED — App v2.3
+// O BOLSO DO FRED — App v2.4
 // =======================================
 
 // ===== BANCO DE DADOS =====
 const DB_NAME = 'bolso-do-fred';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 let db;
 
 function openDB() {
@@ -30,59 +30,12 @@ function openDB() {
     });
 }
 
-function dbAdd(store, data) {
-    return new Promise((resolve, reject) => {
-        const tx = db.transaction(store, 'readwrite');
-        tx.objectStore(store).add(data);
-        tx.oncomplete = () => resolve();
-        tx.onerror = (e) => reject(e.target.error);
-    });
-}
-
-function dbPut(store, data) {
-    return new Promise((resolve, reject) => {
-        const tx = db.transaction(store, 'readwrite');
-        tx.objectStore(store).put(data);
-        tx.oncomplete = () => resolve();
-        tx.onerror = (e) => reject(e.target.error);
-    });
-}
-
-function dbDelete(store, id) {
-    return new Promise((resolve, reject) => {
-        const tx = db.transaction(store, 'readwrite');
-        tx.objectStore(store).delete(id);
-        tx.oncomplete = () => resolve();
-        tx.onerror = (e) => reject(e.target.error);
-    });
-}
-
-function dbGetAll(store) {
-    return new Promise((resolve, reject) => {
-        const tx = db.transaction(store, 'readonly');
-        const request = tx.objectStore(store).getAll();
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = (e) => reject(e.target.error);
-    });
-}
-
-function dbGet(store, key) {
-    return new Promise((resolve, reject) => {
-        const tx = db.transaction(store, 'readonly');
-        const request = tx.objectStore(store).get(key);
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = (e) => reject(e.target.error);
-    });
-}
-
-function dbClear(store) {
-    return new Promise((resolve, reject) => {
-        const tx = db.transaction(store, 'readwrite');
-        tx.objectStore(store).clear();
-        tx.oncomplete = () => resolve();
-        tx.onerror = (e) => reject(e.target.error);
-    });
-}
+function dbAdd(store, data) { return new Promise((resolve, reject) => { const tx = db.transaction(store, 'readwrite'); tx.objectStore(store).add(data); tx.oncomplete = () => resolve(); tx.onerror = (e) => reject(e.target.error); }); }
+function dbPut(store, data) { return new Promise((resolve, reject) => { const tx = db.transaction(store, 'readwrite'); tx.objectStore(store).put(data); tx.oncomplete = () => resolve(); tx.onerror = (e) => reject(e.target.error); }); }
+function dbDelete(store, id) { return new Promise((resolve, reject) => { const tx = db.transaction(store, 'readwrite'); tx.objectStore(store).delete(id); tx.oncomplete = () => resolve(); tx.onerror = (e) => reject(e.target.error); }); }
+function dbGetAll(store) { return new Promise((resolve, reject) => { const tx = db.transaction(store, 'readonly'); const request = tx.objectStore(store).getAll(); request.onsuccess = () => resolve(request.result); request.onerror = (e) => reject(e.target.error); }); }
+function dbGet(store, key) { return new Promise((resolve, reject) => { const tx = db.transaction(store, 'readonly'); const request = tx.objectStore(store).get(key); request.onsuccess = () => resolve(request.result); request.onerror = (e) => reject(e.target.error); }); }
+function dbClear(store) { return new Promise((resolve, reject) => { const tx = db.transaction(store, 'readwrite'); tx.objectStore(store).clear(); tx.oncomplete = () => resolve(); tx.onerror = (e) => reject(e.target.error); }); }
 
 // ===== UTILITÁRIOS =====
 function formatMoney(v) { return 'R$ ' + Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
@@ -91,30 +44,55 @@ function formatDate(ds) { const [y, m, d] = ds.split('-'); return `${d}/${m}/${y
 function getMonthName(m) { return ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][m]; }
 function getMonthShort(m) { return ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][m]; }
 function generateId() { return Date.now().toString(36) + Math.random().toString(36).substr(2, 9); }
-
-function getHojeString() {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-}
+function getHojeString() { const now = new Date(); return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`; }
 
 let toastTimer = null;
-function showToast(msg) {
-    const t = document.getElementById('toast');
-    if (toastTimer) clearTimeout(toastTimer);
-    t.classList.remove('show');
-    void t.offsetWidth;
-    t.textContent = msg;
-    t.classList.add('show');
-    toastTimer = setTimeout(() => {
-        t.classList.remove('show');
-        toastTimer = null;
-    }, 2500);
+function showToast(msg) { const t = document.getElementById('toast'); if (toastTimer) clearTimeout(toastTimer); t.classList.remove('show'); void t.offsetWidth; t.textContent = msg; t.classList.add('show'); toastTimer = setTimeout(() => { t.classList.remove('show'); toastTimer = null; }, 2500); }
+
+// ===== CATEGORIAS DINÂMICAS =====
+const DEFAULT_CATEGORIAS = [
+    { id: 'alimentacao', icon: '🍔', label: 'Alimentação', builtin: true },
+    { id: 'transporte', icon: '🚗', label: 'Transporte', builtin: true },
+    { id: 'moradia', icon: '🏠', label: 'Moradia', builtin: true },
+    { id: 'lazer', icon: '🎮', label: 'Lazer', builtin: true },
+    { id: 'vestuario', icon: '👕', label: 'Vestuário', builtin: true },
+    { id: 'saude', icon: '💊', label: 'Saúde', builtin: true },
+    { id: 'educacao', icon: '📚', label: 'Educação', builtin: true },
+    { id: 'compras', icon: '🛒', label: 'Compras', builtin: true },
+    { id: 'servicos', icon: '🔧', label: 'Serviços', builtin: true },
+    { id: 'outros', icon: '📦', label: 'Outros', builtin: true }
+];
+
+let categoriasCache = [];
+
+async function loadCategorias() {
+    const custom = await dbGet('config', 'categorias-custom');
+    const customs = custom ? custom.valor : [];
+    categoriasCache = [...DEFAULT_CATEGORIAS, ...customs];
+    return categoriasCache;
 }
 
 function getCategoriaInfo(cat) {
-    const m = { alimentacao:{icon:'🍔',label:'Alimentação'}, transporte:{icon:'🚗',label:'Transporte'}, moradia:{icon:'🏠',label:'Moradia'}, lazer:{icon:'🎮',label:'Lazer'}, vestuario:{icon:'👕',label:'Vestuário'}, saude:{icon:'💊',label:'Saúde'}, educacao:{icon:'📚',label:'Educação'}, compras:{icon:'🛒',label:'Compras'}, servicos:{icon:'🔧',label:'Serviços'}, outros:{icon:'❓',label:'Outros'} };
-    return m[cat] || {icon:'❓',label:cat||'Outros'};
+    const found = categoriasCache.find(c => c.id === cat);
+    if (found) return { icon: found.icon, label: found.label };
+    return { icon: '📦', label: cat || 'Outros' };
 }
+
+async function populateCategoriaSelects() {
+    await loadCategorias();
+    const selects = [document.getElementById('select-categoria'), document.getElementById('select-fixa-categoria')];
+    selects.forEach(sel => {
+        if (!sel) return;
+        sel.innerHTML = '';
+        categoriasCache.forEach(c => {
+            const o = document.createElement('option');
+            o.value = c.id;
+            o.textContent = `${c.icon} ${c.label}`;
+            sel.appendChild(o);
+        });
+    });
+}
+
 function getInvestimentoInfo(t) {
     const m = { cdb:{icon:'🏦',label:'CDB'}, tesouro:{icon:'🇧🇷',label:'Tesouro Direto'}, fundo:{icon:'📊',label:'Fundo'}, acoes:{icon:'📈',label:'Ações'}, fii:{icon:'🏢',label:'FII'}, cripto:{icon:'₿',label:'Cripto'}, poupanca:{icon:'🐷',label:'Poupança'}, previdencia:{icon:'🔮',label:'Previdência'}, outro:{icon:'📌',label:'Outro'} };
     return m[t] || {icon:'📌',label:t||'Outro'};
@@ -164,7 +142,8 @@ function navigateTo(screenId) {
     if (screenId === 'screen-fixas') updateFixas();
     if (screenId === 'screen-dados') updateDadosScreen();
     if (screenId === 'screen-notificacoes') updateNotificacoes();
-    if (screenId === 'screen-settings') initTheme();
+    if (screenId === 'screen-settings') initSettingsScreen();
+    if (screenId === 'screen-categorias') updateCategoriasScreen();
     window.scrollTo(0, 0);
 }
 
@@ -172,18 +151,11 @@ function initNavigation() {
     document.querySelectorAll('.nav-item[data-nav]').forEach(btn => {
         btn.addEventListener('click', () => navigateTo('screen-' + btn.dataset.nav));
     });
-
-    ['btn-add','btn-add-2','btn-add-3','btn-add-4'].forEach(id => {
-        const b = document.getElementById(id);
-        if (b) b.addEventListener('click', () => {
-            if (currentScreen === 'screen-fixas') {
-                openFixaModal();
-            } else {
-                openNovoRegistro();
-            }
-        });
+    const addBtn = document.getElementById('btn-add');
+    if (addBtn) addBtn.addEventListener('click', () => {
+        if (currentScreen === 'screen-fixas') openFixaModal();
+        else openNovoRegistro();
     });
-
     document.querySelectorAll('.header-btn-back[data-back]').forEach(btn => {
         btn.addEventListener('click', () => navigateTo('screen-' + btn.dataset.back));
     });
@@ -267,9 +239,50 @@ function handleCreatePinKey(key) {
     }
 }
 
+// ===== SALDO INICIAL =====
+async function getSaldoInicial() {
+    const s = await dbGet('config', 'saldo-inicial');
+    return s ? s.valor : { conta: 0, investido: 0 };
+}
+
+function initSaldoInicial() {
+    applyMoneyMask(document.getElementById('input-saldo-inicial'));
+    applyMoneyMask(document.getElementById('input-investido-inicial'));
+    document.getElementById('btn-salvar-saldo-inicial').addEventListener('click', async () => {
+        const conta = parseMoney(document.getElementById('input-saldo-inicial').value);
+        const investido = parseMoney(document.getElementById('input-investido-inicial').value);
+        await dbPut('config', { chave: 'saldo-inicial', valor: { conta, investido } });
+        showToast('✅ Saldo inicial salvo!');
+        updateSaldoInicialStatus(conta, investido);
+        if (currentScreen === 'screen-dashboard') updateDashboard();
+    });
+}
+
+async function initSettingsScreen() {
+    initTheme();
+    const si = await getSaldoInicial();
+    if (si.conta > 0) document.getElementById('input-saldo-inicial').value = Number(si.conta).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+    if (si.investido > 0) document.getElementById('input-investido-inicial').value = Number(si.investido).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+    updateSaldoInicialStatus(si.conta, si.investido);
+}
+
+function updateSaldoInicialStatus(conta, investido) {
+    const el = document.getElementById('saldo-inicial-status');
+    if (conta > 0 || investido > 0) {
+        el.innerHTML = `<div style="padding:8px;background:var(--bg-card-alt,#f0f7f3);border-radius:8px;font-size:13px;">
+            <div>✅ Saldo em conta: <strong>${formatMoney(conta)}</strong></div>
+            <div>✅ Investido: <strong>${formatMoney(investido)}</strong></div>
+            <div style="margin-top:4px;opacity:0.7;">Esses valores são somados ao patrimônio sem gerar movimentações.</div>
+        </div>`;
+    } else {
+        el.innerHTML = '<p style="font-size:12px;opacity:0.6;">Nenhum saldo inicial definido.</p>';
+    }
+}
+
 // ===== DASHBOARD =====
 async function updateDashboard() {
     const registros = await dbGetAll('registros');
+    const saldoInicial = await getSaldoInicial();
     const now = new Date();
     const mesAtual = now.getMonth();
     const anoAtual = now.getFullYear();
@@ -281,14 +294,12 @@ async function updateDashboard() {
 
     registros.forEach(r => {
         const [y, m] = r.data.split('-').map(Number);
-
         if (r.data <= hoje) {
             if (r.tipo === 'receita') tRecAll += r.valor;
             if (r.tipo === 'gasto') tGasAll += r.valor;
             if (r.tipo === 'investimento') tInvAll += r.valor;
             if (r.tipo === 'resgate') tResAll += r.valor;
         }
-
         if (y === anoAtual && (m - 1) === mesAtual) {
             if (r.tipo === 'receita') tRec += r.valor;
             if (r.tipo === 'gasto') tGas += r.valor;
@@ -297,8 +308,8 @@ async function updateDashboard() {
         }
     });
 
-    const saldoLivre = tRecAll - tGasAll + tResAll;
-    const totalInvestido = tInvAll - tResAll;
+    const saldoLivre = saldoInicial.conta + tRecAll - tGasAll + tResAll;
+    const totalInvestido = saldoInicial.investido + tInvAll - tResAll;
     const patrimonio = saldoLivre + totalInvestido;
 
     document.getElementById('patrimonio-total').textContent = formatMoney(patrimonio);
@@ -564,7 +575,7 @@ async function updateMetas() {
     registros.forEach(r => { const [y, m] = r.data.split('-').map(Number); if (r.tipo === 'gasto' && y === anoAtual && (m - 1) === mesAtual) { totalGastosMes += r.valor; gastosPorCat[r.categoria] = (gastosPorCat[r.categoria] || 0) + r.valor; } });
     const statusEl = document.getElementById('orcamento-status');
     if (orcamento > 0) { const pct = (totalGastosMes / orcamento) * 100; const lv = pct >= 100 ? 'danger' : pct >= 75 ? 'warning' : 'safe'; statusEl.innerHTML = renderProgress('Gasto do mês', totalGastosMes, orcamento, pct, lv); } else statusEl.innerHTML = '';
-    const cats = ['alimentacao', 'transporte', 'moradia', 'lazer', 'vestuario', 'saude', 'educacao', 'compras', 'servicos', 'outros'];
+    const cats = categoriasCache.map(c => c.id);
     const metasConfig = await dbGet('config', 'metas-categorias'); const metas = metasConfig ? metasConfig.valor : {};
     document.getElementById('metas-categorias-list').innerHTML = cats.map(cat => { const info = getCategoriaInfo(cat); const meta = metas[cat] || 0; const gasto = gastosPorCat[cat] || 0; const hm = meta > 0; return `<div class="meta-cat-item" data-cat="${cat}"><span class="meta-cat-icon">${info.icon}</span><div class="meta-cat-info"><div class="meta-cat-name">${info.label}</div><div class="meta-cat-status">${hm ? `${formatMoney(gasto)} / ${formatMoney(meta)}` : 'Sem meta definida'}</div></div>${hm ? `<span class="meta-cat-valor">${Math.round((gasto / meta) * 100)}%</span>` : ''}<span class="meta-cat-arrow">→</span></div>`; }).join('');
     document.querySelectorAll('.meta-cat-item').forEach(i => i.addEventListener('click', () => openMetaModal(i.dataset.cat)));
@@ -665,9 +676,7 @@ async function salvarFixa() {
     if (tipo === 'gasto') { fixa.categoria = document.getElementById('select-fixa-categoria').value; fixa.metodo = document.getElementById('select-fixa-metodo').value; }
     else if (tipo === 'investimento') { fixa.tipoInvestimento = document.getElementById('select-fixa-tipo-inv').value; }
     else { fixa.metodo = document.getElementById('select-fixa-metodo').value; }
-
     if (editingFixaId) await removerRegistrosFuturosFixa(editingFixaId);
-
     await dbPut('fixas', fixa);
     await gerarRegistrosRecorrentes(fixa);
     closeFixaModal();
@@ -677,27 +686,16 @@ async function salvarFixa() {
 }
 
 async function gerarRegistrosRecorrentes(fixa, meses = 12) {
-    const now = new Date();
-    const registros = await dbGetAll('registros');
-
+    const now = new Date(); const registros = await dbGetAll('registros');
     for (let i = 0; i < meses; i++) {
         const mes = (now.getMonth() + i) % 12;
         const ano = now.getFullYear() + Math.floor((now.getMonth() + i) / 12);
         const diasNoMes = new Date(ano, mes + 1, 0).getDate();
         const dia = Math.min(fixa.dia, diasNoMes);
         const ds = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
-
-        const jaExiste = registros.some(r => {
-            if (r.fixaId !== fixa.id) return false;
-            const [ry, rm] = r.data.split('-').map(Number);
-            return ry === ano && (rm - 1) === mes;
-        });
+        const jaExiste = registros.some(r => { if (r.fixaId !== fixa.id) return false; const [ry, rm] = r.data.split('-').map(Number); return ry === ano && (rm - 1) === mes; });
         if (jaExiste) continue;
-
-        const reg = {
-            id: generateId(), tipo: fixa.tipo, valor: fixa.valor, data: ds,
-            descricao: fixa.descricao, fixaId: fixa.id, fixaRecorrente: true, timestamp: Date.now()
-        };
+        const reg = { id: generateId(), tipo: fixa.tipo, valor: fixa.valor, data: ds, descricao: fixa.descricao, fixaId: fixa.id, fixaRecorrente: true, timestamp: Date.now() };
         if (fixa.tipo === 'gasto') { reg.categoria = fixa.categoria; reg.metodo = fixa.metodo; }
         if (fixa.tipo === 'receita') { reg.metodo = fixa.metodo; }
         if (fixa.tipo === 'investimento') { reg.tipoInvestimento = fixa.tipoInvestimento; }
@@ -705,30 +703,10 @@ async function gerarRegistrosRecorrentes(fixa, meses = 12) {
     }
 }
 
-async function removerRegistrosFuturosFixa(fixaId) {
-    const registros = await dbGetAll('registros');
-    const hoje = getHojeString();
-    for (const r of registros) {
-        if (r.fixaId === fixaId && r.fixaRecorrente && r.data > hoje) {
-            await dbDelete('registros', r.id);
-        }
-    }
-}
-
-async function findRegistroByFixaId(fid) {
-    const regs = await dbGetAll('registros');
-    const now = new Date();
-    return regs.find(r => { if (r.fixaId !== fid) return false; const [y, m] = r.data.split('-').map(Number); return y === now.getFullYear() && (m - 1) === now.getMonth(); });
-}
-
+async function removerRegistrosFuturosFixa(fixaId) { const registros = await dbGetAll('registros'); const hoje = getHojeString(); for (const r of registros) { if (r.fixaId === fixaId && r.fixaRecorrente && r.data > hoje) await dbDelete('registros', r.id); } }
+async function findRegistroByFixaId(fid) { const regs = await dbGetAll('registros'); const now = new Date(); return regs.find(r => { if (r.fixaId !== fid) return false; const [y, m] = r.data.split('-').map(Number); return y === now.getFullYear() && (m - 1) === now.getMonth(); }); }
 async function aplicarFixaIndividual(fixa) { await gerarRegistrosRecorrentes(fixa, 12); }
-
-async function reverterFixaIndividual(fid) {
-    const registros = await dbGetAll('registros');
-    for (const r of registros) {
-        if (r.fixaId === fid && r.fixaRecorrente) await dbDelete('registros', r.id);
-    }
-}
+async function reverterFixaIndividual(fid) { const registros = await dbGetAll('registros'); for (const r of registros) { if (r.fixaId === fid && r.fixaRecorrente) await dbDelete('registros', r.id); } }
 
 async function aplicarTodasFixas() {
     const fixas = await dbGetAll('fixas');
@@ -862,6 +840,7 @@ async function updateGraficos() {
 
 async function updateGraficoPatrimonio(registros) {
     const hoje = getHojeString();
+    const saldoInicial = await getSaldoInicial();
     const pontos = [];
     for (let i = 5; i >= 0; i--) {
         let mm = graficoMes - i, yy = graficoAno; if (mm < 0) { mm += 12; yy--; }
@@ -877,7 +856,7 @@ async function updateGraficoPatrimonio(registros) {
                 if (r.tipo === 'resgate') resT += r.valor;
             }
         });
-        const pat = (recT - gasT + resT) + (invT - resT);
+        const pat = saldoInicial.conta + saldoInicial.investido + (recT - gasT + resT) + (invT - resT);
         pontos.push({ label: getMonthShort(mm), valor: pat });
     }
     const container = document.getElementById('grafico-patrimonio-container');
@@ -897,13 +876,14 @@ async function updateProjecao(registros) {
     const fixasAtivas = fixas.filter(f => f.ativa !== false);
     const hoje = getHojeString();
     const now = new Date();
+    const saldoInicial = await getSaldoInicial();
 
     const container = document.getElementById('projecao-chart-container');
     const tabelaEl = document.getElementById('projecao-tabela');
     const infoEl = document.getElementById('projecao-info');
 
     if (fixasAtivas.length === 0) {
-        container.innerHTML = '<div class="empty-state"><span class="empty-icon">🔮</span><p>Cadastre fixas para ver a projeção</p></div>';
+        container.innerHTML = '<div class="empty-state"><span class="empty-icon">📊</span><p>Cadastre fixas para ver a projeção</p></div>';
         tabelaEl.innerHTML = ''; infoEl.innerHTML = '';
         return;
     }
@@ -917,7 +897,7 @@ async function updateProjecao(registros) {
             if (r.tipo === 'resgate') resT += r.valor;
         }
     });
-    const patrimonioAtual = (recT - gasT + resT) + (invT - resT);
+    const patrimonioAtual = saldoInicial.conta + saldoInicial.investido + (recT - gasT + resT) + (invT - resT);
 
     let recFixas = 0, gasFixas = 0, invFixas = 0;
     fixasAtivas.forEach(f => { if (f.tipo === 'receita') recFixas += f.valor; if (f.tipo === 'gasto') gasFixas += f.valor; if (f.tipo === 'investimento') invFixas += f.valor; });
@@ -943,12 +923,96 @@ async function updateProjecao(registros) {
     container.innerHTML = `<div class="projecao-chart"><svg class="projecao-svg" viewBox="0 0 ${w} ${h}"><path d="${solidPath}" fill="none" stroke="var(--green-medium)" stroke-width="2.5" stroke-linecap="round"/><path d="${dashedPath}" fill="none" stroke="var(--purple-medium)" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="6,4"/>${dots}</svg></div><div class="projecao-labels">${projecao.map(p => `<div class="projecao-label-item ${p.tipo}">${p.label}</div>`).join('')}</div><div class="projecao-legenda"><span class="legenda-item"><span class="legenda-dot" style="background:var(--green-medium)"></span>Atual</span><span class="legenda-item"><span class="legenda-dot" style="background:var(--purple-medium)"></span>Projeção</span></div>`;
 
     let tabelaHtml = '<div class="projecao-table"><div class="projecao-table-header"><span>Mês</span><span>Tipo</span><span style="text-align:right">Patrimônio</span></div>';
-    projecao.forEach(p => { const rowClass = p.tipo === 'atual' ? 'projecao-row-atual' : 'projecao-row-futuro'; const badge = p.tipo === 'atual' ? '<span class="projecao-tipo-badge">📍 Atual</span>' : '<span class="projecao-tipo-badge">🔮 Projeção</span>'; const vc = p.valor >= 0 ? 'positivo' : 'negativo'; tabelaHtml += `<div class="projecao-table-row ${rowClass}"><span>${p.label}/${p.ano}</span>${badge}<span class="projecao-table-valor ${vc}">${formatMoney(p.valor)}</span></div>`; });
+    projecao.forEach(p => { const rowClass = p.tipo === 'atual' ? 'projecao-row-atual' : 'projecao-row-futuro'; const badge = p.tipo === 'atual' ? '<span class="projecao-tipo-badge">📍 Atual</span>' : '<span class="projecao-tipo-badge">📊 Projeção</span>'; const vc = p.valor >= 0 ? 'positivo' : 'negativo'; tabelaHtml += `<div class="projecao-table-row ${rowClass}"><span>${p.label}/${p.ano}</span>${badge}<span class="projecao-table-valor ${vc}">${formatMoney(p.valor)}</span></div>`; });
     tabelaHtml += '</div>'; tabelaEl.innerHTML = tabelaHtml;
 
     const ultimaProj = projecao[projecao.length - 1];
     const diff = ultimaProj.valor - patrimonioAtual;
     infoEl.innerHTML = `<div class="projecao-resumo"><div class="projecao-resumo-item"><span class="projecao-resumo-label">Patrimônio Atual</span><span class="projecao-resumo-valor">${formatMoney(patrimonioAtual)}</span></div><div class="projecao-resumo-item"><span class="projecao-resumo-label">Receitas Fixas/mês</span><span class="projecao-resumo-valor positivo">+ ${formatMoney(recFixas)}</span></div><div class="projecao-resumo-item"><span class="projecao-resumo-label">Gastos Fixos/mês</span><span class="projecao-resumo-valor negativo">- ${formatMoney(gasFixas)}</span></div>${invFixas > 0 ? `<div class="projecao-resumo-item"><span class="projecao-resumo-label">Invest. Fixos/mês</span><span class="projecao-resumo-valor">→ ${formatMoney(invFixas)}</span></div>` : ''}<div class="projecao-resumo-item"><span class="projecao-resumo-label">Saldo Fixo/mês</span><span class="projecao-resumo-valor ${saldoFixoMensal >= 0 ? 'positivo' : 'negativo'}">${formatMoney(saldoFixoMensal)}</span></div><div class="projecao-resumo-item destaque"><span class="projecao-resumo-label"><strong>Projeção em 6 meses</strong></span><span class="projecao-resumo-valor ${ultimaProj.valor >= 0 ? 'positivo' : 'negativo'}"><strong>${formatMoney(ultimaProj.valor)}</strong></span></div><div class="projecao-resumo-item"><span class="projecao-resumo-label">Variação total</span><span class="projecao-resumo-valor ${diff >= 0 ? 'positivo' : 'negativo'}">${diff >= 0 ? '+' : ''}${formatMoney(diff)}</span></div></div><p class="projecao-aviso">⚠️ Projeção baseada nas fixas cadastradas. Gastos variáveis não incluídos.</p>`;
+}
+
+// ===== CATEGORIAS TELA =====
+let editingCatId = null;
+
+function initCategorias() {
+    document.getElementById('btn-nova-categoria').addEventListener('click', () => openCategoriaModal());
+    document.getElementById('modal-categoria-close').addEventListener('click', closeCategoriaModal);
+    document.getElementById('modal-categoria-overlay').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeCategoriaModal(); });
+    document.getElementById('cat-btn-cancelar').addEventListener('click', closeCategoriaModal);
+    document.getElementById('cat-btn-salvar').addEventListener('click', salvarCategoria);
+}
+
+function openCategoriaModal(cat) {
+    editingCatId = cat ? cat.id : null;
+    document.getElementById('modal-categoria-title').textContent = cat ? 'Editar Categoria' : 'Nova Categoria';
+    document.getElementById('input-cat-icon').value = cat ? cat.icon : '';
+    document.getElementById('input-cat-nome').value = cat ? cat.label : '';
+    document.getElementById('modal-categoria-overlay').classList.add('open');
+}
+
+function closeCategoriaModal() { document.getElementById('modal-categoria-overlay').classList.remove('open'); editingCatId = null; }
+
+async function salvarCategoria() {
+    const icon = document.getElementById('input-cat-icon').value.trim() || '📦';
+    const nome = document.getElementById('input-cat-nome').value.trim();
+    if (!nome) { showToast('⚠️ Informe o nome'); return; }
+
+    const custom = await dbGet('config', 'categorias-custom');
+    const customs = custom ? custom.valor : [];
+
+    if (editingCatId) {
+        const idx = customs.findIndex(c => c.id === editingCatId);
+        if (idx >= 0) { customs[idx].icon = icon; customs[idx].label = nome; }
+    } else {
+        const id = nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_');
+        if (categoriasCache.some(c => c.id === id)) { showToast('⚠️ Categoria já existe'); return; }
+        customs.push({ id, icon, label: nome });
+    }
+
+    await dbPut('config', { chave: 'categorias-custom', valor: customs });
+    await populateCategoriaSelects();
+    closeCategoriaModal();
+    showToast(editingCatId ? '✅ Categoria atualizada!' : '✅ Categoria criada!');
+    updateCategoriasScreen();
+}
+
+async function excluirCategoria(id) {
+    const custom = await dbGet('config', 'categorias-custom');
+    const customs = custom ? custom.valor : [];
+    const nova = customs.filter(c => c.id !== id);
+    await dbPut('config', { chave: 'categorias-custom', valor: nova });
+    await populateCategoriaSelects();
+    showToast('🗑️ Categoria excluída');
+    updateCategoriasScreen();
+}
+
+async function updateCategoriasScreen() {
+    await loadCategorias();
+    const listEl = document.getElementById('categorias-list');
+    listEl.innerHTML = categoriasCache.map(c => {
+        const isBuiltin = c.builtin === true;
+        return `<div class="cat-item">
+            <span class="cat-item-icon">${c.icon}</span>
+            <span class="cat-item-label">${c.label}</span>
+            ${isBuiltin ? '<span class="cat-item-badge">Padrão</span>' : `<div class="cat-item-actions"><button class="cat-item-edit" data-cat-id="${c.id}">✏️</button><button class="cat-item-delete" data-cat-id="${c.id}">🗑️</button></div>`}
+        </div>`;
+    }).join('');
+
+    listEl.querySelectorAll('.cat-item-edit').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const custom = await dbGet('config', 'categorias-custom');
+            const cat = (custom ? custom.valor : []).find(c => c.id === btn.dataset.catId);
+            if (cat) openCategoriaModal(cat);
+        });
+    });
+    listEl.querySelectorAll('.cat-item-delete').forEach(btn => {
+        btn.addEventListener('click', () => {
+            pendingDeleteId = btn.dataset.catId;
+            document.getElementById('confirm-text').textContent = 'Excluir esta categoria?';
+            document.getElementById('confirm-delete').onclick = async () => { await excluirCategoria(pendingDeleteId); closeConfirmModal(); };
+            document.getElementById('modal-confirm-overlay').classList.add('open');
+        });
+    });
 }
 
 // ===== DADOS =====
@@ -984,8 +1048,8 @@ async function updateDadosScreen() {
 
 async function exportarJSON() {
     const registros = await dbGetAll('registros'); const fixas = await dbGetAll('fixas'); const configs = {};
-    try { for (const k of ['pin', 'orcamento-geral', 'metas-categorias', 'theme']) { const c = await dbGet('config', k); if (c) configs[k] = c; } } catch (e) { }
-    const backup = { version: '2.3', date: new Date().toISOString(), registros, fixas, configs };
+    try { for (const k of ['pin', 'orcamento-geral', 'metas-categorias', 'theme', 'saldo-inicial', 'categorias-custom']) { const c = await dbGet('config', k); if (c) configs[k] = c; } } catch (e) { }
+    const backup = { version: '2.4', date: new Date().toISOString(), registros, fixas, configs };
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `bolso-fred-backup-${new Date().toISOString().split('T')[0]}.json`; a.click(); URL.revokeObjectURL(url);
     showToast('📤 Backup exportado!');
@@ -1003,7 +1067,7 @@ async function importarJSON(e) {
             if (data.fixas) { await dbClear('fixas'); for (const f of data.fixas) await dbPut('fixas', f); }
             if (data.configs) { for (const [k, v] of Object.entries(data.configs)) await dbPut('config', v); }
             document.getElementById('modal-import-overlay').classList.remove('open');
-            showToast('📥 Backup restaurado!'); updateDadosScreen(); updateDashboard();
+            showToast('📥 Backup restaurado!'); await populateCategoriaSelects(); updateDadosScreen(); updateDashboard();
         };
     } catch (err) { showToast('❌ Arquivo inválido'); }
     e.target.value = '';
@@ -1047,13 +1111,7 @@ function initNotificacoes() {
     document.getElementById('toggle-alerta-semanal').addEventListener('change', salvarPrefsNotif);
 }
 
-async function ativarNotificacoes() {
-    if (!('Notification' in window)) { showToast('❌ Navegador não suporta'); return; }
-    const perm = await Notification.requestPermission();
-    if (perm === 'granted') { showToast('🔔 Notificações ativadas!'); await dbPut('config', { chave: 'notif-ativo', valor: true }); updateNotificacoes(); }
-    else showToast('❌ Permissão negada');
-}
-
+async function ativarNotificacoes() { if (!('Notification' in window)) { showToast('❌ Navegador não suporta'); return; } const perm = await Notification.requestPermission(); if (perm === 'granted') { showToast('🔔 Notificações ativadas!'); await dbPut('config', { chave: 'notif-ativo', valor: true }); updateNotificacoes(); } else showToast('❌ Permissão negada'); }
 async function updateNotificacoes() {
     const notifAtivo = await dbGet('config', 'notif-ativo');
     const isAtivo = notifAtivo && notifAtivo.valor && Notification.permission === 'granted';
@@ -1066,68 +1124,16 @@ async function updateNotificacoes() {
     const horario = await dbGet('config', 'notif-horario'); if (horario) document.getElementById('select-notif-hora').value = horario.valor;
     await updateLembretes(); await updateHistoricoNotifs();
 }
-
 async function salvarPrefsNotif() { await dbPut('config', { chave: 'notif-prefs', valor: { fixas: document.getElementById('toggle-alerta-fixas').checked, metas: document.getElementById('toggle-alerta-metas').checked, semanal: document.getElementById('toggle-alerta-semanal').checked } }); showToast('✅ Preferências salvas!'); }
 async function salvarHorarioNotif() { await dbPut('config', { chave: 'notif-horario', valor: document.getElementById('select-notif-hora').value }); showToast('✅ Horário salvo!'); }
-
 function openLembreteModal() { document.getElementById('input-lembrete-titulo').value = ''; document.getElementById('input-lembrete-data').valueAsDate = new Date(); document.getElementById('select-lembrete-repetir').value = 'nao'; document.getElementById('modal-lembrete-overlay').classList.add('open'); }
 function closeLembreteModal() { document.getElementById('modal-lembrete-overlay').classList.remove('open'); }
-
-async function salvarLembrete() {
-    const titulo = document.getElementById('input-lembrete-titulo').value.trim(); if (!titulo) { showToast('⚠️ Informe o título'); return; }
-    const lembretes = await dbGet('config', 'lembretes'); const lista = lembretes ? lembretes.valor : [];
-    lista.push({ id: generateId(), titulo, data: document.getElementById('input-lembrete-data').value, repetir: document.getElementById('select-lembrete-repetir').value, ativo: true });
-    await dbPut('config', { chave: 'lembretes', valor: lista }); closeLembreteModal(); showToast('✅ Lembrete salvo!'); updateLembretes();
-}
-
-async function updateLembretes() {
-    const lembretes = await dbGet('config', 'lembretes'); const lista = lembretes ? lembretes.valor : [];
-    const listEl = document.getElementById('lembretes-list');
-    if (lista.length === 0) { listEl.innerHTML = '<div class="empty-state"><span class="empty-icon">📝</span><p>Nenhum lembrete</p></div>'; return; }
-    const rm = { nao: 'Uma vez', diario: 'Diário', semanal: 'Semanal', mensal: 'Mensal' };
-    listEl.innerHTML = lista.map(l => `<div class="lembrete-item"><span class="lembrete-icon">📌</span><div class="lembrete-info"><div class="lembrete-titulo">${l.titulo}</div><div class="lembrete-meta">${formatDate(l.data)} · ${rm[l.repetir] || 'Uma vez'}</div></div><button class="lembrete-delete" data-lembrete-id="${l.id}">✕</button></div>`).join('');
-    listEl.querySelectorAll('.lembrete-delete').forEach(btn => { btn.addEventListener('click', async () => { const lem = await dbGet('config', 'lembretes'); const nova = (lem ? lem.valor : []).filter(l => l.id !== btn.dataset.lembreteId); await dbPut('config', { chave: 'lembretes', valor: nova }); showToast('🗑️ Lembrete removido'); updateLembretes(); }); });
-}
-
-async function updateHistoricoNotifs() {
-    const hist = await dbGet('config', 'notif-historico'); const lista = hist ? hist.valor : [];
-    const listEl = document.getElementById('notificacoes-historico-list');
-    if (lista.length === 0) { listEl.innerHTML = '<div class="empty-state"><span class="empty-icon">🔕</span><p>Nenhuma notificação enviada</p></div>'; return; }
-    listEl.innerHTML = lista.slice(-10).reverse().map(n => `<div class="notif-hist-item"><span class="notif-hist-icon">${n.icon || '🔔'}</span><div class="notif-hist-info"><div class="notif-hist-text">${n.texto}</div><div class="notif-hist-time">${n.data || ''}</div></div></div>`).join('');
-}
-
+async function salvarLembrete() { const titulo = document.getElementById('input-lembrete-titulo').value.trim(); if (!titulo) { showToast('⚠️ Informe o título'); return; } const lembretes = await dbGet('config', 'lembretes'); const lista = lembretes ? lembretes.valor : []; lista.push({ id: generateId(), titulo, data: document.getElementById('input-lembrete-data').value, repetir: document.getElementById('select-lembrete-repetir').value, ativo: true }); await dbPut('config', { chave: 'lembretes', valor: lista }); closeLembreteModal(); showToast('✅ Lembrete salvo!'); updateLembretes(); }
+async function updateLembretes() { const lembretes = await dbGet('config', 'lembretes'); const lista = lembretes ? lembretes.valor : []; const listEl = document.getElementById('lembretes-list'); if (lista.length === 0) { listEl.innerHTML = '<div class="empty-state"><span class="empty-icon">📝</span><p>Nenhum lembrete</p></div>'; return; } const rm = { nao: 'Uma vez', diario: 'Diário', semanal: 'Semanal', mensal: 'Mensal' }; listEl.innerHTML = lista.map(l => `<div class="lembrete-item"><span class="lembrete-icon">📌</span><div class="lembrete-info"><div class="lembrete-titulo">${l.titulo}</div><div class="lembrete-meta">${formatDate(l.data)} · ${rm[l.repetir] || 'Uma vez'}</div></div><button class="lembrete-delete" data-lembrete-id="${l.id}">✕</button></div>`).join(''); listEl.querySelectorAll('.lembrete-delete').forEach(btn => { btn.addEventListener('click', async () => { const lem = await dbGet('config', 'lembretes'); const nova = (lem ? lem.valor : []).filter(l => l.id !== btn.dataset.lembreteId); await dbPut('config', { chave: 'lembretes', valor: nova }); showToast('🗑️ Lembrete removido'); updateLembretes(); }); }); }
+async function updateHistoricoNotifs() { const hist = await dbGet('config', 'notif-historico'); const lista = hist ? hist.valor : []; const listEl = document.getElementById('notificacoes-historico-list'); if (lista.length === 0) { listEl.innerHTML = '<div class="empty-state"><span class="empty-icon">🔕</span><p>Nenhuma notificação enviada</p></div>'; return; } listEl.innerHTML = lista.slice(-10).reverse().map(n => `<div class="notif-hist-item"><span class="notif-hist-icon">${n.icon || '🔔'}</span><div class="notif-hist-info"><div class="notif-hist-text">${n.texto}</div><div class="notif-hist-time">${n.data || ''}</div></div></div>`).join(''); }
 async function limparHistoricoNotifs() { await dbPut('config', { chave: 'notif-historico', valor: [] }); showToast('🗑️ Histórico limpo'); updateHistoricoNotifs(); }
-
-async function checkNotifications() {
-    const notifAtivo = await dbGet('config', 'notif-ativo');
-    if (!notifAtivo || !notifAtivo.valor || Notification.permission !== 'granted') return;
-    const prefs = await dbGet('config', 'notif-prefs'); const p = prefs ? prefs.valor : { fixas: true, metas: true };
-    const now = new Date();
-    if (p.fixas !== false) {
-        const fixas = await dbGetAll('fixas'); const registros = await dbGetAll('registros');
-        const aplicadas = new Set(); registros.forEach(r => { if (r.fixaId) { const [y, m] = r.data.split('-').map(Number); if (y === now.getFullYear() && (m - 1) === now.getMonth()) aplicadas.add(r.fixaId); } });
-        const pendentes = fixas.filter(f => f.ativa !== false && !aplicadas.has(f.id) && f.dia === now.getDate());
-        if (pendentes.length > 0) sendNotification('📅 Fixas Pendentes', `${pendentes.length} fixa(s) vencem hoje!`, 'fixas');
-    }
-    if (p.metas !== false) {
-        const orcConfig = await dbGet('config', 'orcamento-geral');
-        if (orcConfig && orcConfig.valor > 0) {
-            const registros = await dbGetAll('registros'); let tg = 0;
-            registros.forEach(r => { const [y, m] = r.data.split('-').map(Number); if (r.tipo === 'gasto' && y === now.getFullYear() && (m - 1) === now.getMonth()) tg += r.valor; });
-            const pct = (tg / orcConfig.valor) * 100;
-            if (pct >= 100) sendNotification('🚨 Orçamento Estourado', `Ultrapassou em ${formatMoney(tg - orcConfig.valor)}!`, 'orc-100');
-            else if (pct >= 75) sendNotification('⚠️ Alerta', `Já usou ${pct.toFixed(0)}% do orçamento.`, 'orc-75');
-        }
-    }
-}
-
-async function sendNotification(title, body, tag) {
-    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) navigator.serviceWorker.controller.postMessage({ type: 'SHOW_NOTIFICATION', payload: { title, body, tag } });
-    else new Notification(title, { body, icon: './icons/icon-192.png' });
-    const hist = await dbGet('config', 'notif-historico'); const lista = hist ? hist.valor : [];
-    lista.push({ texto: `${title}: ${body}`, icon: '🔔', data: new Date().toLocaleString('pt-BR') });
-    await dbPut('config', { chave: 'notif-historico', valor: lista });
-}
+async function checkNotifications() { const notifAtivo = await dbGet('config', 'notif-ativo'); if (!notifAtivo || !notifAtivo.valor || Notification.permission !== 'granted') return; const prefs = await dbGet('config', 'notif-prefs'); const p = prefs ? prefs.valor : { fixas: true, metas: true }; const now = new Date(); if (p.fixas !== false) { const fixas = await dbGetAll('fixas'); const registros = await dbGetAll('registros'); const aplicadas = new Set(); registros.forEach(r => { if (r.fixaId) { const [y, m] = r.data.split('-').map(Number); if (y === now.getFullYear() && (m - 1) === now.getMonth()) aplicadas.add(r.fixaId); } }); const pendentes = fixas.filter(f => f.ativa !== false && !aplicadas.has(f.id) && f.dia === now.getDate()); if (pendentes.length > 0) sendNotification('📅 Fixas Pendentes', `${pendentes.length} fixa(s) vencem hoje!`, 'fixas'); } if (p.metas !== false) { const orcConfig = await dbGet('config', 'orcamento-geral'); if (orcConfig && orcConfig.valor > 0) { const registros = await dbGetAll('registros'); let tg = 0; registros.forEach(r => { const [y, m] = r.data.split('-').map(Number); if (r.tipo === 'gasto' && y === now.getFullYear() && (m - 1) === now.getMonth()) tg += r.valor; }); const pct = (tg / orcConfig.valor) * 100; if (pct >= 100) sendNotification('🚨 Orçamento Estourado', `Ultrapassou em ${formatMoney(tg - orcConfig.valor)}!`, 'orc-100'); else if (pct >= 75) sendNotification('⚠️ Alerta', `Já usou ${pct.toFixed(0)}% do orçamento.`, 'orc-75'); } } }
+async function sendNotification(title, body, tag) { if ('serviceWorker' in navigator && navigator.serviceWorker.controller) navigator.serviceWorker.controller.postMessage({ type: 'SHOW_NOTIFICATION', payload: { title, body, tag } }); else new Notification(title, { body, icon: './icons/icon-192.png' }); const hist = await dbGet('config', 'notif-historico'); const lista = hist ? hist.valor : []; lista.push({ texto: `${title}: ${body}`, icon: '🔔', data: new Date().toLocaleString('pt-BR') }); await dbPut('config', { chave: 'notif-historico', valor: lista }); }
 
 // ===== SETTINGS =====
 function initSettings() {
@@ -1160,7 +1166,6 @@ function handleURLParams() {
     }
 }
 
-// ===== SW Messages =====
 function initServiceWorkerMessages() {
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.addEventListener('message', (event) => {
@@ -1174,23 +1179,21 @@ function initServiceWorkerMessages() {
 async function init() {
     await openDB();
     await applyThemeFromSaved();
+    await populateCategoriaSelects();
     initNavigation(); initFormulario(); initModals(); initHistorico(); initGraficos();
     initMetas(); initFixas(); initDados(); initNotificacoes(); initSettings();
+    initSaldoInicial(); initCategorias();
     initServiceWorkerMessages();
     await initPIN();
     handleURLParams();
 
-    // ✅ Service Worker com auto-atualização
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js').then((reg) => {
             reg.update();
-
             reg.addEventListener('updatefound', () => {
                 const newWorker = reg.installing;
                 newWorker.addEventListener('statechange', () => {
-                    if (newWorker.state === 'activated') {
-                        window.location.reload();
-                    }
+                    if (newWorker.state === 'activated') window.location.reload();
                 });
             });
         }).catch(err => console.log('SW Error:', err));
