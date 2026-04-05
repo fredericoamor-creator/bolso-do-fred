@@ -1,5 +1,5 @@
 // =======================================
-// O BOLSO DO FRED — App v2.3 (Corrigido)
+// O BOLSO DO FRED — App v2.3
 // =======================================
 
 // ===== BANCO DE DADOS =====
@@ -168,7 +168,6 @@ function navigateTo(screenId) {
     window.scrollTo(0, 0);
 }
 
-// ✅ CORRIGIDO: botão + abre nova fixa quando na tela de fixas
 function initNavigation() {
     document.querySelectorAll('.nav-item[data-nav]').forEach(btn => {
         btn.addEventListener('click', () => navigateTo('screen-' + btn.dataset.nav));
@@ -1180,7 +1179,23 @@ async function init() {
     initServiceWorkerMessages();
     await initPIN();
     handleURLParams();
-    if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW Error:', err));
+
+    // ✅ Service Worker com auto-atualização
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js').then((reg) => {
+            reg.update();
+
+            reg.addEventListener('updatefound', () => {
+                const newWorker = reg.installing;
+                newWorker.addEventListener('statechange', () => {
+                    if (newWorker.state === 'activated') {
+                        window.location.reload();
+                    }
+                });
+            });
+        }).catch(err => console.log('SW Error:', err));
+    }
+
     setInterval(checkNotifications, 30 * 60 * 1000);
     setTimeout(checkNotifications, 5000);
 }
