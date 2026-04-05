@@ -198,6 +198,7 @@ function handlePinKey(key) {
             if (config && config.valor === pinBuffer) {
                 errorEl.textContent = ''; authenticated = true; navigateTo('screen-dashboard');
                 pinBuffer = ''; dots.forEach(d => d.classList.remove('filled', 'error'));
+                // Checa onboarding após PIN correto
                 checkOnboarding();
             } else {
                 errorEl.textContent = 'PIN incorreto';
@@ -230,6 +231,7 @@ function handleCreatePinKey(key) {
                     dots.forEach(d => d.classList.remove('filled'));
                     subtitle.textContent = 'Crie um PIN de 4 dígitos';
                     navigateTo('screen-dashboard');
+                    // Checa onboarding após criar PIN (primeira vez)
                     checkOnboarding();
                 } else {
                     errorEl.textContent = 'PINs não coincidem. Tente novamente.';
@@ -241,13 +243,17 @@ function handleCreatePinKey(key) {
     }
 }
 
-// ===== ONBOARDING =====
+// =============================================
+// ONBOARDING — Configuração inicial
+// =============================================
+
 async function checkOnboarding() {
     const onboardingConfig = await dbGet('config', 'onboarding-done');
     const onboardingDone = onboardingConfig ? onboardingConfig.valor : false;
     const registros = await dbGetAll('registros');
     const temMovimentacoes = registros.length > 0;
 
+    // Mostra onboarding se nunca foi feito E não tem movimentações
     if (!onboardingDone && !temMovimentacoes) {
         setTimeout(() => openOnboarding(), 400);
     }
@@ -273,11 +279,14 @@ function showOnboardingStep(step) {
     document.querySelectorAll('.onboarding-step').forEach(el => {
         el.classList.remove('active');
     });
+
     const stepEl = document.getElementById(`onboarding-step-${step}`);
     if (stepEl) {
+        // Força reflow para reiniciar a animação
         void stepEl.offsetWidth;
         stepEl.classList.add('active');
     }
+
     document.querySelectorAll('.onboarding-dot').forEach(dot => {
         const dotStep = parseInt(dot.getAttribute('data-step'));
         dot.classList.toggle('active', dotStep === step);
@@ -315,11 +324,19 @@ async function onboardingFinish() {
     const saldoConta = parseOnboardingValor('onboarding-saldo-conta');
     const saldoInvest = parseOnboardingValor('onboarding-saldo-invest');
 
+    // Salva saldos iniciais
     await dbPut('config', { chave: 'saldo-inicial', valor: { conta: saldoConta, investido: saldoInvest } });
+
+    // Marca onboarding como feito
     await dbPut('config', { chave: 'onboarding-done', valor: true });
 
+    // Fecha o onboarding
     closeOnboarding();
+
+    // Atualiza o dashboard
     updateDashboard();
+
+    // Toast de boas-vindas
     showToast('🎉 Tudo pronto! Bom controle financeiro!');
 }
 
@@ -356,10 +373,7 @@ function setupOnboardingInputs() {
 
 function formatarInputMoedaOnboarding(input) {
     let digits = input.value.replace(/\D/g, '');
-    if (!digits) {
-        input.value = '';
-        return;
-    }
+    if (!digits) { input.value = ''; return; }
     let valor = parseInt(digits, 10) / 100;
     input.value = valor.toLocaleString('pt-BR', {
         style: 'currency',
@@ -846,4 +860,5 @@ async function aplicarTodasFixas() {
 
 async function openFixaDetalhe(id) {
     const fixa = await dbGet('fixas', id); if (!fixa) return; currentFixaDetalheId = id;
-    const isAp =
+    const isAp = !!(await findRegistroByFixaId(fixa.id));
+    const now = new Date(); const mesLabel =
