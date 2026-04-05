@@ -1,5 +1,5 @@
 // =======================================
-// O BOLSO DO FRED — App v2.2 (Todos os bugs corrigidos)
+// O BOLSO DO FRED — App v2.3 (Corrigido)
 // =======================================
 
 // ===== BANCO DE DADOS =====
@@ -97,13 +97,11 @@ function getHojeString() {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 }
 
-// ✅ TOAST CORRIGIDO — garante que desaparece
 let toastTimer = null;
 function showToast(msg) {
     const t = document.getElementById('toast');
     if (toastTimer) clearTimeout(toastTimer);
     t.classList.remove('show');
-    // Força reflow para reiniciar a transição
     void t.offsetWidth;
     t.textContent = msg;
     t.classList.add('show');
@@ -170,14 +168,23 @@ function navigateTo(screenId) {
     window.scrollTo(0, 0);
 }
 
+// ✅ CORRIGIDO: botão + abre nova fixa quando na tela de fixas
 function initNavigation() {
     document.querySelectorAll('.nav-item[data-nav]').forEach(btn => {
         btn.addEventListener('click', () => navigateTo('screen-' + btn.dataset.nav));
     });
+
     ['btn-add','btn-add-2','btn-add-3','btn-add-4'].forEach(id => {
         const b = document.getElementById(id);
-        if (b) b.addEventListener('click', () => openNovoRegistro());
+        if (b) b.addEventListener('click', () => {
+            if (currentScreen === 'screen-fixas') {
+                openFixaModal();
+            } else {
+                openNovoRegistro();
+            }
+        });
     });
+
     document.querySelectorAll('.header-btn-back[data-back]').forEach(btn => {
         btn.addEventListener('click', () => navigateTo('screen-' + btn.dataset.back));
     });
@@ -261,26 +268,7 @@ function handleCreatePinKey(key) {
     }
 }
 
-// ===== DASHBOARD — CÁLCULOS CORRIGIDOS =====
-/*
- * LÓGICA CORRETA:
- * Saldo Livre = Receitas - Gastos (dinheiro disponível, sem considerar investimentos)
- * Total Investido = Investimentos - Resgates
- * Patrimônio Total = Saldo Livre + Total Investido
- *
- * Exemplo do Fred: Receita 4454.44, Gasto 1765.03, Investimento 34558.47
- * Saldo Livre = 4454.44 - 1765.03 = 2689.41
- * Total Investido = 34558.47
- * Patrimônio = 2689.41 + 34558.47 = 37247.88
- *
- * NOTA: Investimento NÃO subtrai do saldo livre.
- * Investir é mover dinheiro de "livre" para "investido", mas para simplificar
- * e bater com a expectativa do Fred, tratamos como:
- * - Receita entra no saldo livre
- * - Gasto sai do saldo livre
- * - Investimento é patrimônio separado (não subtrai do livre)
- * - Resgate tira do investido e volta pro livre
- */
+// ===== DASHBOARD =====
 async function updateDashboard() {
     const registros = await dbGetAll('registros');
     const now = new Date();
@@ -295,7 +283,6 @@ async function updateDashboard() {
     registros.forEach(r => {
         const [y, m] = r.data.split('-').map(Number);
 
-        // Patrimônio: só registros realizados (data <= hoje)
         if (r.data <= hoje) {
             if (r.tipo === 'receita') tRecAll += r.valor;
             if (r.tipo === 'gasto') tGasAll += r.valor;
@@ -303,7 +290,6 @@ async function updateDashboard() {
             if (r.tipo === 'resgate') tResAll += r.valor;
         }
 
-        // Resumo do mês corrente
         if (y === anoAtual && (m - 1) === mesAtual) {
             if (r.tipo === 'receita') tRec += r.valor;
             if (r.tipo === 'gasto') tGas += r.valor;
@@ -312,10 +298,9 @@ async function updateDashboard() {
         }
     });
 
-    // ✅ CÁLCULOS CORRIGIDOS
-    const saldoLivre = tRecAll - tGasAll + tResAll;  // Receitas - Gastos + Resgates
-    const totalInvestido = tInvAll - tResAll;          // Investido - Resgatado
-    const patrimonio = saldoLivre + totalInvestido;    // Livre + Investido
+    const saldoLivre = tRecAll - tGasAll + tResAll;
+    const totalInvestido = tInvAll - tResAll;
+    const patrimonio = saldoLivre + totalInvestido;
 
     document.getElementById('patrimonio-total').textContent = formatMoney(patrimonio);
     document.getElementById('saldo-livre').textContent = formatMoney(saldoLivre);
@@ -621,7 +606,7 @@ async function updateOrcamentoPreview(totalGastosMes) {
     previewEl.innerHTML = metasAtivas.slice(0, 3).map(([cat, meta]) => { const info = getCategoriaInfo(cat); const g = gastosPorCat[cat] || 0; const pct = Math.min((g / meta) * 100, 100); const lv = pct >= 100 ? 'danger' : pct >= 75 ? 'warning' : 'safe'; return `<div class="meta-preview-item"><span class="meta-preview-icon">${info.icon}</span><div class="meta-preview-info"><div class="meta-preview-name">${info.label}</div><div class="meta-preview-bar"><div class="meta-preview-fill ${lv}" style="width:${pct}%"></div></div></div><span class="meta-preview-valor">${formatMoney(g)}</span></div>`; }).join('');
 }
 
-// ===== FIXAS (CORRIGIDO — RECORRÊNCIA AUTOMÁTICA) =====
+// ===== FIXAS =====
 let filtroFixaTipo = 'todos', editingFixaId = null, currentFixaDetalheId = null;
 
 function initFixas() {
@@ -682,11 +667,9 @@ async function salvarFixa() {
     else if (tipo === 'investimento') { fixa.tipoInvestimento = document.getElementById('select-fixa-tipo-inv').value; }
     else { fixa.metodo = document.getElementById('select-fixa-metodo').value; }
 
-    // Se editando, limpa registros futuros antigos
     if (editingFixaId) await removerRegistrosFuturosFixa(editingFixaId);
 
     await dbPut('fixas', fixa);
-    // ✅ Gera registros recorrentes automaticamente
     await gerarRegistrosRecorrentes(fixa);
     closeFixaModal();
     showToast(editingFixaId ? '✅ Fixa atualizada!' : '✅ Fixa cadastrada com recorrência!');
@@ -694,7 +677,6 @@ async function salvarFixa() {
     if (currentScreen === 'screen-dashboard') await updateDashboard();
 }
 
-// ✅ Gera registros para os próximos 12 meses
 async function gerarRegistrosRecorrentes(fixa, meses = 12) {
     const now = new Date();
     const registros = await dbGetAll('registros');
@@ -706,7 +688,6 @@ async function gerarRegistrosRecorrentes(fixa, meses = 12) {
         const dia = Math.min(fixa.dia, diasNoMes);
         const ds = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
 
-        // Pula se já existe registro dessa fixa nesse mês
         const jaExiste = registros.some(r => {
             if (r.fixaId !== fixa.id) return false;
             const [ry, rm] = r.data.split('-').map(Number);
@@ -788,7 +769,6 @@ async function editarFixa() { if (!currentFixaDetalheId) return; const f = await
 async function excluirFixa() {
     if (!currentFixaDetalheId) return;
     await removerRegistrosFuturosFixa(currentFixaDetalheId);
-    // Remove também registros passados dessa fixa
     const registros = await dbGetAll('registros');
     for (const r of registros) { if (r.fixaId === currentFixaDetalheId && r.fixaRecorrente) await dbDelete('registros', r.id); }
     await dbDelete('fixas', currentFixaDetalheId);
@@ -847,12 +827,10 @@ async function updateGraficos() {
     let tRec = 0, tGas = 0, tInv = 0;
     doMes.forEach(r => { if (r.tipo === 'receita') tRec += r.valor; if (r.tipo === 'gasto') tGas += r.valor; if (r.tipo === 'investimento') tInv += r.valor; });
 
-    // Balanço
     const maxVal = Math.max(tRec, tGas, tInv, 1);
     const saldo = tRec - tGas - tInv;
     document.getElementById('grafico-balanco').innerHTML = `<div class="balanco-row"><span class="balanco-icon">💵</span><div class="balanco-info"><span class="balanco-label">Receitas</span><div class="balanco-bar-bg"><div class="balanco-bar-fill receita" style="width:${(tRec / maxVal) * 100}%"></div></div></div><span class="balanco-valor receita">${formatMoney(tRec)}</span></div><div class="balanco-row"><span class="balanco-icon">💸</span><div class="balanco-info"><span class="balanco-label">Gastos</span><div class="balanco-bar-bg"><div class="balanco-bar-fill gasto" style="width:${(tGas / maxVal) * 100}%"></div></div></div><span class="balanco-valor gasto">${formatMoney(tGas)}</span></div><div class="balanco-row"><span class="balanco-icon">📈</span><div class="balanco-info"><span class="balanco-label">Investido</span><div class="balanco-bar-bg"><div class="balanco-bar-fill investimento" style="width:${(tInv / maxVal) * 100}%"></div></div></div><span class="balanco-valor investimento">${formatMoney(tInv)}</span></div><div class="balanco-saldo"><span class="balanco-saldo-label">Saldo do Mês</span><span class="balanco-saldo-valor ${saldo >= 0 ? 'positivo' : 'negativo'}">${formatMoney(saldo)}</span></div>`;
 
-    // Pizza
     const gastosPorCat = {};
     doMes.filter(r => r.tipo === 'gasto').forEach(r => { gastosPorCat[r.categoria] = (gastosPorCat[r.categoria] || 0) + r.valor; });
     const pizzaContainer = document.getElementById('grafico-pizza-container');
@@ -867,23 +845,19 @@ async function updateGraficos() {
         pizzaContainer.innerHTML = `<div class="pizza-wrapper"><div class="pizza-svg-container"><svg viewBox="0 0 100 100">${svgSlices}</svg></div><div class="pizza-legenda">${legendaHtml}</div></div>`;
     }
 
-    // Barras 6 meses
     const barrasContainer = document.getElementById('grafico-barras-container');
     const meses6 = [];
     for (let i = 5; i >= 0; i--) { let mm = graficoMes - i, yy = graficoAno; if (mm < 0) { mm += 12; yy--; } let rec = 0, gas = 0, inv = 0; registros.forEach(r => { const [ry, rm] = r.data.split('-').map(Number); if (ry === yy && (rm - 1) === mm) { if (r.tipo === 'receita') rec += r.valor; if (r.tipo === 'gasto') gas += r.valor; if (r.tipo === 'investimento') inv += r.valor; } }); meses6.push({ label: getMonthShort(mm), rec, gas, inv }); }
     const maxBarra = Math.max(...meses6.flatMap(m => [m.rec, m.gas, m.inv]), 1);
     barrasContainer.innerHTML = meses6.map(m => { const hR = Math.max((m.rec / maxBarra) * 120, 2); const hG = Math.max((m.gas / maxBarra) * 120, 2); const hI = Math.max((m.inv / maxBarra) * 120, 2); return `<div class="barra-grupo"><div class="barra-conjunto"><div class="barra receita" style="height:${hR}px"></div><div class="barra gasto" style="height:${hG}px"></div><div class="barra investimento" style="height:${hI}px"></div></div><span class="barra-label">${m.label}</span></div>`; }).join('');
 
-    // Patrimônio histórico
     await updateGraficoPatrimonio(registros);
 
-    // Top gastos
     const topGastos = doMes.filter(r => r.tipo === 'gasto').sort((a, b) => b.valor - a.valor).slice(0, 5);
     const topList = document.getElementById('grafico-top-list');
     if (topGastos.length === 0) topList.innerHTML = '<div class="empty-state"><span class="empty-icon">🏆</span><p>Sem gastos neste mês</p></div>';
     else { const topMax = topGastos[0].valor; topList.innerHTML = topGastos.map((r, i) => { const info = getCategoriaInfo(r.categoria); const pct = (r.valor / topMax) * 100; return `<div class="top-item"><span class="top-rank">${i + 1}º</span><span class="top-icon">${info.icon}</span><div class="top-info"><div class="top-desc">${r.descricao || info.label}</div><div class="top-cat">${info.label} · ${formatDate(r.data)}</div><div class="top-bar-bg"><div class="top-bar-fill" style="width:${pct}%"></div></div></div><span class="top-valor">${formatMoney(r.valor)}</span></div>`; }).join(''); }
 
-    // ✅ PROJEÇÃO CORRIGIDA
     await updateProjecao(registros);
 }
 
@@ -904,7 +878,6 @@ async function updateGraficoPatrimonio(registros) {
                 if (r.tipo === 'resgate') resT += r.valor;
             }
         });
-        // Mesma fórmula corrigida: saldo livre + investido
         const pat = (recT - gasT + resT) + (invT - resT);
         pontos.push({ label: getMonthShort(mm), valor: pat });
     }
@@ -920,7 +893,6 @@ async function updateGraficoPatrimonio(registros) {
     container.innerHTML = `<div class="patrimonio-chart"><svg class="patrimonio-chart-svg" viewBox="0 0 ${w} ${h}"><defs><linearGradient id="patrimonioGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--green-medium)" stop-opacity="0.4"/><stop offset="100%" stop-color="var(--green-medium)" stop-opacity="0"/></linearGradient></defs><path class="patrimonio-area" d="${areaPath}"/><path class="patrimonio-line" d="${linePath}"/>${dots}</svg></div><div class="patrimonio-labels">${pontos.map(p => `<div><div class="patrimonio-label-item">${p.label}</div><div class="patrimonio-valor-item">${formatMoney(p.valor)}</div></div>`).join('')}</div>`;
 }
 
-// ✅ PROJEÇÃO FUTURA CORRIGIDA — usa fixas para projetar patrimônio
 async function updateProjecao(registros) {
     const fixas = await dbGetAll('fixas');
     const fixasAtivas = fixas.filter(f => f.ativa !== false);
@@ -937,7 +909,6 @@ async function updateProjecao(registros) {
         return;
     }
 
-    // Patrimônio atual (fórmula corrigida, só realizados)
     let recT = 0, gasT = 0, invT = 0, resT = 0;
     registros.forEach(r => {
         if (r.data <= hoje) {
@@ -949,13 +920,10 @@ async function updateProjecao(registros) {
     });
     const patrimonioAtual = (recT - gasT + resT) + (invT - resT);
 
-    // Saldo fixo mensal
     let recFixas = 0, gasFixas = 0, invFixas = 0;
     fixasAtivas.forEach(f => { if (f.tipo === 'receita') recFixas += f.valor; if (f.tipo === 'gasto') gasFixas += f.valor; if (f.tipo === 'investimento') invFixas += f.valor; });
     const saldoFixoMensal = recFixas - gasFixas;
-    // Investimento fixo não subtrai do patrimônio (só move de livre para investido)
 
-    // Gerar projeção 7 pontos
     const projecao = [];
     let patrimonioProjetado = patrimonioAtual;
     for (let i = 0; i <= 6; i++) {
@@ -965,7 +933,6 @@ async function updateProjecao(registros) {
         else { patrimonioProjetado += saldoFixoMensal; projecao.push({ label: getMonthShort(mes), valor: patrimonioProjetado, tipo: 'futuro', mes, ano }); }
     }
 
-    // Gráfico
     const minVal = Math.min(...projecao.map(p => p.valor));
     const maxVal = Math.max(...projecao.map(p => p.valor));
     const range = maxVal - minVal || 1;
@@ -976,12 +943,10 @@ async function updateProjecao(registros) {
     const dots = pts.map(p => `<circle cx="${p.x}" cy="${p.y}" r="3.5" fill="${p.tipo === 'atual' ? 'var(--green-medium)' : 'var(--purple-medium)'}"/>`).join('');
     container.innerHTML = `<div class="projecao-chart"><svg class="projecao-svg" viewBox="0 0 ${w} ${h}"><path d="${solidPath}" fill="none" stroke="var(--green-medium)" stroke-width="2.5" stroke-linecap="round"/><path d="${dashedPath}" fill="none" stroke="var(--purple-medium)" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="6,4"/>${dots}</svg></div><div class="projecao-labels">${projecao.map(p => `<div class="projecao-label-item ${p.tipo}">${p.label}</div>`).join('')}</div><div class="projecao-legenda"><span class="legenda-item"><span class="legenda-dot" style="background:var(--green-medium)"></span>Atual</span><span class="legenda-item"><span class="legenda-dot" style="background:var(--purple-medium)"></span>Projeção</span></div>`;
 
-    // Tabela
     let tabelaHtml = '<div class="projecao-table"><div class="projecao-table-header"><span>Mês</span><span>Tipo</span><span style="text-align:right">Patrimônio</span></div>';
     projecao.forEach(p => { const rowClass = p.tipo === 'atual' ? 'projecao-row-atual' : 'projecao-row-futuro'; const badge = p.tipo === 'atual' ? '<span class="projecao-tipo-badge">📍 Atual</span>' : '<span class="projecao-tipo-badge">🔮 Projeção</span>'; const vc = p.valor >= 0 ? 'positivo' : 'negativo'; tabelaHtml += `<div class="projecao-table-row ${rowClass}"><span>${p.label}/${p.ano}</span>${badge}<span class="projecao-table-valor ${vc}">${formatMoney(p.valor)}</span></div>`; });
     tabelaHtml += '</div>'; tabelaEl.innerHTML = tabelaHtml;
 
-    // Resumo
     const ultimaProj = projecao[projecao.length - 1];
     const diff = ultimaProj.valor - patrimonioAtual;
     infoEl.innerHTML = `<div class="projecao-resumo"><div class="projecao-resumo-item"><span class="projecao-resumo-label">Patrimônio Atual</span><span class="projecao-resumo-valor">${formatMoney(patrimonioAtual)}</span></div><div class="projecao-resumo-item"><span class="projecao-resumo-label">Receitas Fixas/mês</span><span class="projecao-resumo-valor positivo">+ ${formatMoney(recFixas)}</span></div><div class="projecao-resumo-item"><span class="projecao-resumo-label">Gastos Fixos/mês</span><span class="projecao-resumo-valor negativo">- ${formatMoney(gasFixas)}</span></div>${invFixas > 0 ? `<div class="projecao-resumo-item"><span class="projecao-resumo-label">Invest. Fixos/mês</span><span class="projecao-resumo-valor">→ ${formatMoney(invFixas)}</span></div>` : ''}<div class="projecao-resumo-item"><span class="projecao-resumo-label">Saldo Fixo/mês</span><span class="projecao-resumo-valor ${saldoFixoMensal >= 0 ? 'positivo' : 'negativo'}">${formatMoney(saldoFixoMensal)}</span></div><div class="projecao-resumo-item destaque"><span class="projecao-resumo-label"><strong>Projeção em 6 meses</strong></span><span class="projecao-resumo-valor ${ultimaProj.valor >= 0 ? 'positivo' : 'negativo'}"><strong>${formatMoney(ultimaProj.valor)}</strong></span></div><div class="projecao-resumo-item"><span class="projecao-resumo-label">Variação total</span><span class="projecao-resumo-valor ${diff >= 0 ? 'positivo' : 'negativo'}">${diff >= 0 ? '+' : ''}${formatMoney(diff)}</span></div></div><p class="projecao-aviso">⚠️ Projeção baseada nas fixas cadastradas. Gastos variáveis não incluídos.</p>`;
@@ -1021,7 +986,7 @@ async function updateDadosScreen() {
 async function exportarJSON() {
     const registros = await dbGetAll('registros'); const fixas = await dbGetAll('fixas'); const configs = {};
     try { for (const k of ['pin', 'orcamento-geral', 'metas-categorias', 'theme']) { const c = await dbGet('config', k); if (c) configs[k] = c; } } catch (e) { }
-    const backup = { version: '2.2', date: new Date().toISOString(), registros, fixas, configs };
+    const backup = { version: '2.3', date: new Date().toISOString(), registros, fixas, configs };
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `bolso-fred-backup-${new Date().toISOString().split('T')[0]}.json`; a.click(); URL.revokeObjectURL(url);
     showToast('📤 Backup exportado!');
@@ -1181,7 +1146,7 @@ function initSettings() {
     });
 }
 
-// ===== URL PARAMS (atalhos iOS) =====
+// ===== URL PARAMS =====
 function handleURLParams() {
     const params = new URLSearchParams(window.location.search);
     if (params.has('valor')) {
