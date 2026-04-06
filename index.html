@@ -410,6 +410,7 @@
         <h2 class="header-sub-title">Configurações</h2>
     </div>
     <div class="content-scroll">
+        <!-- SALDO INICIAL -->
         <div class="card">
             <div class="card-header"><span class="card-title">🏦 Saldo Inicial</span></div>
             <p class="card-desc">Informe seus saldos atuais para o app calcular corretamente desde o início.</p>
@@ -438,11 +439,12 @@
             <div class="card-header"><span class="card-title">⚠️ Zona de Perigo</span></div>
             <button class="btn-danger" id="btn-reset-dados">🗑️ Apagar Todos os Dados</button>
         </div>
-        <div class="app-version">O Bolso do Fred v2.5</div>
+        <div class="app-version">O Bolso do Fred v2.4</div>
     </div>
 </div>
 
 <!-- ===== MODAIS ===== -->
+<!-- Modal Detalhes -->
 <div class="modal-overlay" id="modal-overlay">
     <div class="modal">
         <div class="modal-header"><span class="modal-title" id="modal-title">Detalhes</span><button class="modal-close" id="modal-close">✕</button></div>
@@ -450,12 +452,14 @@
         <div class="modal-actions"><button class="btn-secundario" id="modal-btn-edit">✏️ Editar</button><button class="btn-danger-sm" id="modal-btn-delete">🗑️ Excluir</button></div>
     </div>
 </div>
+<!-- Modal Confirmação -->
 <div class="modal-overlay" id="modal-confirm-overlay">
     <div class="modal modal-confirm">
         <p class="confirm-text" id="confirm-text">Tem certeza?</p>
         <div class="modal-actions"><button class="btn-secundario" id="confirm-cancel">Cancelar</button><button class="btn-danger-sm" id="confirm-delete">Excluir</button></div>
     </div>
 </div>
+<!-- Modal Meta -->
 <div class="modal-overlay" id="modal-meta-overlay">
     <div class="modal">
         <div class="modal-header"><span class="modal-title" id="modal-meta-title">Meta</span><button class="modal-close" id="modal-meta-close">✕</button></div>
@@ -466,6 +470,7 @@
         <div class="modal-actions"><button class="btn-danger-sm" id="meta-btn-remover">🗑️ Remover</button><button class="btn-primary" id="meta-btn-salvar">💾 Salvar</button></div>
     </div>
 </div>
+<!-- Modal Fixa -->
 <div class="modal-overlay" id="modal-fixa-overlay">
     <div class="modal">
         <div class="modal-header"><span class="modal-title" id="modal-fixa-title">Nova Fixa</span><button class="modal-close" id="modal-fixa-close">✕</button></div>
@@ -485,6 +490,7 @@
         <div class="modal-actions"><button class="btn-secundario" id="fixa-btn-cancelar">Cancelar</button><button class="btn-primary" id="fixa-btn-salvar">💾 Salvar</button></div>
     </div>
 </div>
+<!-- Modal Fixa Detalhe -->
 <div class="modal-overlay" id="modal-fixa-detalhe-overlay">
     <div class="modal">
         <div class="modal-header"><span class="modal-title" id="modal-fixa-detalhe-title">Fixa</span><button class="modal-close" id="modal-fixa-detalhe-close">✕</button></div>
@@ -492,6 +498,7 @@
         <div class="modal-actions"><button class="btn-secundario" id="fixa-detalhe-btn-edit">✏️ Editar</button><button class="btn-danger-sm" id="fixa-detalhe-btn-delete">🗑️ Excluir</button></div>
     </div>
 </div>
+<!-- Modal Import -->
 <div class="modal-overlay" id="modal-import-overlay">
     <div class="modal modal-confirm">
         <p class="confirm-text">📥 Importar Backup</p>
@@ -499,6 +506,7 @@
         <div class="modal-actions"><button class="btn-secundario" id="import-cancel">Cancelar</button><button class="btn-danger-sm" id="import-confirm">Substituir Dados</button></div>
     </div>
 </div>
+<!-- Modal Lembrete -->
 <div class="modal-overlay" id="modal-lembrete-overlay">
     <div class="modal">
         <div class="modal-header"><span class="modal-title">Novo Lembrete</span><button class="modal-close" id="modal-lembrete-close">✕</button></div>
@@ -510,6 +518,7 @@
         <div class="modal-actions"><button class="btn-secundario" id="lembrete-btn-cancelar">Cancelar</button><button class="btn-primary" id="lembrete-btn-salvar">💾 Salvar</button></div>
     </div>
 </div>
+<!-- Modal Categoria -->
 <div class="modal-overlay" id="modal-categoria-overlay">
     <div class="modal">
         <div class="modal-header"><span class="modal-title" id="modal-categoria-title">Nova Categoria</span><button class="modal-close" id="modal-categoria-close">✕</button></div>
