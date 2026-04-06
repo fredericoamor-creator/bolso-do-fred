@@ -1,8 +1,8 @@
 // =======================================
-// O BOLSO DO FRED — Service Worker v2.4
+// O BOLSO DO FRED — Service Worker v2.5
 // =======================================
 
-const CACHE_VERSION = 'bolso-v2.4';
+const CACHE_VERSION = 'bolso-v2.5';
 const CACHE_FILES = [
     './',
     './index.html',
