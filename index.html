@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#2d8659">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>O Bolso do Fred</title>
+    <link rel="manifest" href="./manifest.json">
+    <link rel="apple-touch-icon" href="./icons/icon-192.png">
+    <link rel="icon" type="image/png" href="./icons/icon-192.png">
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+
+<!-- TOAST -->
+<div id="toast" class="toast"></div>
+
+<!-- ===== TELA PIN ===== -->
+<div id="screen-pin" class="screen active">
+    <div class="pin-container">
+        <div class="pin-logo">💰</div>
+        <h1 class="pin-title">O Bolso do Fred</h1>
+        <p class="pin-subtitle">Digite seu PIN</p>
+        <div class="pin-dots" id="pin-dots">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        </div>
+        <p class="pin-error" id="pin-error"></p>
+        <div class="pin-pad">
+            <button class="pin-key" data-key="1">1</button>
+            <button class="pin-key" data-key="2">2</button>
+            <button class="pin-key" data-key="3">3</button>
+            <button class="pin-key" data-key="4">4</button>
+            <button class="pin-key" data-key="5">5</button>
+            <button class="pin-key" data-key="6">6</button>
+            <button class="pin-key" data-key="7">7</button>
+            <button class="pin-key" data-key="8">8</button>
+            <button class="pin-key" data-key="9">9</button>
+            <button class="pin-key pin-key-empty"></button>
+            <button class="pin-key" data-key="0">0</button>
+            <button class="pin-key pin-key-delete" data-key="delete">⌫</button>
+        </div>
+    </div>
+</div>
+
+<!-- ===== TELA CRIAR PIN ===== -->
+<div id="screen-create-pin" class="screen">
+    <div class="pin-container">
+        <div class="pin-logo">🔐</div>
+        <h1 class="pin-title">Criar PIN</h1>
+        <p class="pin-subtitle" id="create-pin-subtitle">Crie um PIN de 4 dígitos</p>
+        <div class="pin-dots" id="create-pin-dots">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        </div>
+        <p class="pin-error" id="create-pin-error"></p>
+        <div class="pin-pad">
+            <button class="pin-key" data-create-key="1">1</button>
+            <button class="pin-key" data-create-key="2">2</button>
+            <button class="pin-key" data-create-key="3">3</button>
+            <button class="pin-key" data-create-key="4">4</button>
+            <button class="pin-key" data-create-key="5">5</button>
+            <button class="pin-key" data-create-key="6">6</button>
+            <button class="pin-key" data-create-key="7">7</button>
+            <button class="pin-key" data-create-key="8">8</button>
+            <button class="pin-key" data-create-key="9">9</button>
+            <button class="pin-key pin-key-empty"></button>
+            <button class="pin-key" data-create-key="0">0</button>
+            <button class="pin-key pin-key-delete" data-create-key="delete">⌫</button>
+        </div>
+    </div>
+</div>
+
+<!-- ===== DASHBOARD ===== -->
+<div id="screen-dashboard" class="screen">
+    <div class="header-dashboard">
+        <div class="header-left">
+            <h1 class="header-title">O Bolso do Fred</h1>
+            <p class="header-month" id="mes-atual">Abril</p>
+        </div>
+        <button class="header-btn-icon" id="btn-settings">⚙️</button>
+    </div>
+    <div class="content-scroll">
+        <!-- Patrimônio -->
+        <div class="card card-patrimonio">
+            <div class="patrimonio-header">
+                <span class="patrimonio-label">Patrimônio Total</span>
+            </div>
+            <div class="patrimonio-valor" id="patrimonio-total">R$ 0,00</div>
+            <div class="patrimonio-detalhes">
+                <div class="patrimonio-item"><span class="patrimonio-item-label">Saldo Livre</span><span class="patrimonio-item-valor" id="saldo-livre">R$ 0,00</span></div>
+                <div class="patrimonio-item"><span class="patrimonio-item-label">Investido</span><span class="patrimonio-item-valor" id="total-investido">R$ 0,00</span></div>
+            </div>
+        </div>
+        <!-- Resumo -->
+        <div class="card card-resumo">
+            <div class="resumo-grid">
+                <div class="resumo-item receita"><span class="resumo-label">Receitas</span><span class="resumo-valor" id="total-receitas">+ R$ 0,00</span></div>
+                <div class="resumo-item gasto"><span class="resumo-label">Gastos</span><span class="resumo-valor" id="total-gastos">- R$ 0,00</span></div>
+                <div class="resumo-item investimento"><span class="resumo-label">Investido</span><span class="resumo-valor" id="total-investido-mes">→ R$ 0,00</span></div>
+            </div>
+        </div>
+        <!-- Orçamento -->
+        <div class="card" id="card-orcamento" style="display:none;">
+            <div class="card-header"><span class="card-title">🎯 Orçamento & Metas</span><button class="card-link" id="btn-ver-metas">Ver Todas →</button></div>
+            <div id="orcamento-geral"></div>
+            <div id="metas-preview"></div>
+        </div>
+        <!-- Fixas Pendentes -->
+        <div class="card" id="card-fixas-pendentes" style="display:none;">
+            <div class="card-header"><span class="card-title">🔁 Fixas Pendentes</span><button class="card-link" id="btn-ver-fixas-dash">Ver Todas →</button></div>
+            <div id="fixas-pendentes-list"></div>
+            <button class="btn-secundario" id="btn-aplicar-fixas-dash" style="margin-top:8px;">✅ Aplicar Todas</button>
+        </div>
+        <!-- Movimentações -->
+        <div class="card">
+            <div class="card-header"><span class="card-title">📋 Últimas Movimentações</span><button class="card-link" id="btn-ver-todas">Ver Todas →</button></div>
+            <div id="movimentacoes-list"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== NOVO REGISTRO ===== -->
+<div id="screen-novo-registro" class="screen">
+    <div class="header-sub">
+        <button class="header-btn-back" id="btn-back-registro">← Voltar</button>
+        <h2 class="header-sub-title" id="titulo-registro">Novo Registro</h2>
+    </div>
+    <div class="content-scroll">
+        <form id="form-registro" class="form-container">
+            <div class="tipo-selector">
+                <button type="button" class="tipo-btn active" data-tipo="gasto">💸 Gasto</button>
+                <button type="button" class="tipo-btn" data-tipo="receita">💵 Receita</button>
+                <button type="button" class="tipo-btn" data-tipo="investimento">📈 Investir</button>
+                <button type="button" class="tipo-btn" data-tipo="resgate">🔄 Resgate</button>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Valor *</label>
+                <input type="text" inputmode="numeric" id="input-valor" class="form-input input-valor" placeholder="0,00" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Descrição</label>
+                <input type="text" id="input-descricao" class="form-input" placeholder="Ex: Almoço no restaurante" maxlength="50">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Data *</label>
+                <input type="date" id="input-data" class="form-input" required>
+            </div>
+            <div class="form-group" id="group-categoria">
+                <label class="form-label">Categoria</label>
+                <select id="select-categoria" class="form-input"></select>
+            </div>
+            <div class="form-group" id="group-metodo">
+                <label class="form-label">Método</label>
+                <div class="chips" id="chips-metodo">
+                    <button type="button" class="chip active" data-metodo="credito">💳 Crédito</button>
+                    <button type="button" class="chip" data-metodo="debito">💰 Débito</button>
+                    <button type="button" class="chip" data-metodo="pix">📲 Pix</button>
+                    <button type="button" class="chip" data-metodo="boleto">📄 Boleto</button>
+                    <button type="button" class="chip" data-metodo="dinheiro">💵 Dinheiro</button>
+                </div>
+            </div>
+            <div class="form-group hidden" id="group-tipo-investimento">
+                <label class="form-label">Tipo de Investimento</label>
+                <select id="select-tipo-investimento" class="form-input">
+                    <option value="cdb">🏦 CDB</option>
+                    <option value="tesouro">🇧🇷 Tesouro Direto</option>
+                    <option value="fundo">📊 Fundo</option>
+                    <option value="acoes">📈 Ações</option>
+                    <option value="fii">🏢 FII</option>
+                    <option value="cripto">₿ Cripto</option>
+                    <option value="poupanca">🐷 Poupança</option>
+                    <option value="previdencia">🔮 Previdência</option>
+                    <option value="outro">📌 Outro</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Nota (opcional)</label>
+                <textarea id="input-nota" class="form-input form-textarea" placeholder="Anotação extra..." maxlength="100"></textarea>
+            </div>
+            <button type="submit" class="btn-primary" id="btn-salvar">💾 Salvar</button>
+        </form>
+    </div>
+</div>
+
+<!-- ===== HISTÓRICO ===== -->
+<div id="screen-historico" class="screen">
+    <div class="header-sub">
+        <button class="header-btn-back" data-back="dashboard">← Voltar</button>
+        <h2 class="header-sub-title">Histórico</h2>
+    </div>
+    <div class="content-scroll">
+        <div class="filtros-container">
+            <div class="filtro-chips">
+                <button class="filtro-chip active" data-filtro-tipo="todos">Todos</button>
+                <button class="filtro-chip" data-filtro-tipo="receita">Receitas</button>
+                <button class="filtro-chip" data-filtro-tipo="gasto">Gastos</button>
+                <button class="filtro-chip" data-filtro-tipo="investimento">Invest.</button>
+                <button class="filtro-chip" data-filtro-tipo="resgate">Resgates</button>
+            </div>
+            <div class="filtro-mes">
+                <button class="filtro-mes-btn" id="filtro-mes-prev">◀</button>
+                <span class="filtro-mes-label" id="filtro-mes-label">Abril 2026</span>
+                <button class="filtro-mes-btn" id="filtro-mes-next">▶</button>
+                <button class="filtro-chip filtro-todos-meses" id="filtro-todos-meses">Todos</button>
+            </div>
+        </div>
+        <div class="historico-summary">
+            <span id="historico-count">0 registros</span>
+            <span id="historico-soma">Saldo: R$ 0,00</span>
+        </div>
+        <div id="historico-list"></div>
+    </div>
+</div>
+
+<!-- ===== GRÁFICOS ===== -->
+<div id="screen-graficos" class="screen">
+    <div class="header-sub">
+        <button class="header-btn-back" data-back="dashboard">← Voltar</button>
+        <h2 class="header-sub-title">Gráficos</h2>
+    </div>
+    <div class="content-scroll">
+        <div class="filtro-mes" style="margin-bottom:16px;">
+            <button class="filtro-mes-btn" id="grafico-mes-prev">◀</button>
+            <span class="filtro-mes-label" id="grafico-mes-label">Abril 2026</span>
+            <button class="filtro-mes-btn" id="grafico-mes-next">▶</button>
+        </div>
+        <div class="card"><div class="card-header"><span class="card-title">⚖️ Balanço</span></div><div id="grafico-balanco"></div></div>
+        <div class="card"><div class="card-header"><span class="card-title">🥧 Gastos por Categoria</span></div><div id="grafico-pizza-container"></div></div>
+        <div class="card"><div class="card-header"><span class="card-title">📊 Últimos 6 Meses</span></div><div class="barras-legenda"><span class="legenda-item"><span class="legenda-dot" style="background:var(--green-medium)"></span>Receitas</span><span class="legenda-item"><span class="legenda-dot" style="background:var(--red-medium)"></span>Gastos</span><span class="legenda-item"><span class="legenda-dot" style="background:var(--purple-medium)"></span>Invest.</span></div><div class="barras-container" id="grafico-barras-container"></div></div>
+        <div class="card"><div class="card-header"><span class="card-title">💰 Evolução do Patrimônio</span></div><div id="grafico-patrimonio-container"></div></div>
+        <div class="card"><div class="card-header"><span class="card-title">🏆 Top 5 Maiores Gastos</span></div><div id="grafico-top-list"></div></div>
+        <div class="card">
+            <div class="card-header"><span class="card-title">📊 Projeção Financeira</span></div>
+            <div id="projecao-chart-container"></div>
+            <div id="projecao-tabela"></div>
+            <div id="projecao-info"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== METAS ===== -->
+<div id="screen-metas" class="screen">
+    <div class="header-sub">
+        <button class="header-btn-back" data-back="dashboard">← Voltar</button>
+        <h2 class="header-sub-title">Metas & Orçamento</h2>
+    </div>
+    <div class="content-scroll">
+        <div class="card">
+            <div class="card-header"><span class="card-title">💰 Orçamento Geral</span></div>
+            <p class="card-desc">Limite mensal total de gastos</p>
+            <div class="form-group"><input type="text" inputmode="numeric" id="input-orcamento-geral" class="form-input" placeholder="0,00"></div>
+            <button class="btn-primary" id="btn-salvar-orcamento">💾 Salvar Orçamento</button>
+            <div id="orcamento-status" style="margin-top:12px;"></div>
+        </div>
+        <div class="card">
+            <div class="card-header"><span class="card-title">🎯 Metas por Categoria</span></div>
+            <div id="metas-categorias-list"></div>
+        </div>
+        <div class="card">
+            <div class="card-header"><span class="card-title">📊 Resumo</span></div>
+            <div id="metas-resumo-list"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== FIXAS ===== -->
+<div id="screen-fixas" class="screen">
+    <div class="header-sub">
+        <button class="header-btn-back" data-back="dashboard">← Voltar</button>
+        <h2 class="header-sub-title">Receitas & Gastos Fixos</h2>
+    </div>
+    <div class="content-scroll">
+        <div class="card" id="card-fixas-pend-full" style="display:none;">
+            <div class="card-header"><span class="card-title">⏳ Pendentes este mês</span></div>
+            <div id="fixas-pend-full-list"></div>
+            <button class="btn-secundario" id="btn-aplicar-todas" style="margin-top:8px;">✅ Aplicar Todas</button>
+        </div>
+        <div class="filtro-chips" style="margin-bottom:12px;">
+            <button class="filtro-chip active" data-filtro-fixa="todos">Todas</button>
+            <button class="filtro-chip" data-filtro-fixa="receita">Receitas</button>
+            <button class="filtro-chip" data-filtro-fixa="gasto">Gastos</button>
+            <button class="filtro-chip" data-filtro-fixa="investimento">Invest.</button>
+        </div>
+        <div id="fixas-list"></div>
+        <div class="card" style="margin-top:16px;"><div id="fixas-totais"></div></div>
+        <button class="btn-primary" id="btn-nova-fixa" style="margin-top:16px;">➕ Nova Fixa</button>
+    </div>
+</div>
+
+<!-- ===== MAIS ===== -->
+<div id="screen-mais" class="screen">
+    <div class="header-sub">
+        <button class="header-btn-back" data-back="dashboard">← Voltar</button>
+        <h2 class="header-sub-title">Mais</h2>
+    </div>
+    <div class="content-scroll">
+        <div class="mais-grid">
+            <button class="mais-item" data-mais-nav="metas"><span class="mais-icon">🎯</span><span class="mais-label">Metas</span></button>
+            <button class="mais-item" data-mais-nav="fixas"><span class="mais-icon">🔁</span><span class="mais-label">Fixas</span></button>
+            <button class="mais-item" data-mais-nav="categorias"><span class="mais-icon">🏷️</span><span class="mais-label">Categorias</span></button>
+            <button class="mais-item" data-mais-nav="dados"><span class="mais-icon">📁</span><span class="mais-label">Dados</span></button>
+            <button class="mais-item" data-mais-nav="notificacoes"><span class="mais-icon">🔔</span><span class="mais-label">Alertas</span></button>
+            <button class="mais-item" data-mais-nav="settings"><span class="mais-icon">⚙️</span><span class="mais-label">Config.</span></button>
+        </div>
+    </div>
+</div>
+
+<!-- ===== CATEGORIAS ===== -->
+<div id="screen-categorias" class="screen">
+    <div class="header-sub">
+        <button class="header-btn-back" data-back="mais">← Voltar</button>
+        <h2 class="header-sub-title">Categorias</h2>
+    </div>
+    <div class="content-scroll">
+        <div class="card">
+            <div class="card-header"><span class="card-title">🏷️ Suas Categorias</span></div>
+            <p class="card-desc">Gerencie as categorias de gastos</p>
+            <div id="categorias-list"></div>
+            <button class="btn-primary" id="btn-nova-categoria" style="margin-top:16px;">➕ Nova Categoria</button>
+        </div>
+    </div>
+</div>
+
+<!-- ===== DADOS ===== -->
+<div id="screen-dados" class="screen">
+    <div class="header-sub">
+        <button class="header-btn-back" data-back="mais">← Voltar</button>
+        <h2 class="header-sub-title">Dados</h2>
+    </div>
+    <div class="content-scroll">
+        <div class="card">
+            <div class="card-header"><span class="card-title">📊 Estatísticas</span></div>
+            <div id="dados-stats"></div>
+        </div>
+        <div class="card">
+            <div class="card-header"><span class="card-title">💾 Backup JSON</span></div>
+            <button class="btn-primary" id="btn-exportar-json">📤 Exportar Backup</button>
+            <div style="margin-top:12px;"><label class="btn-secundario" style="display:inline-block;cursor:pointer;">📥 Importar Backup<input type="file" id="input-importar-json" accept=".json" style="display:none;"></label></div>
+        </div>
+        <div class="card">
+            <div class="card-header"><span class="card-title">📊 Exportar CSV</span></div>
+            <div class="filtro-mes" style="margin-bottom:12px;">
+                <button class="filtro-mes-btn" id="csv-mes-prev">◀</button>
+                <span class="filtro-mes-label" id="csv-mes-label">Abril 2026</span>
+                <button class="filtro-mes-btn" id="csv-mes-next">▶</button>
+                <button class="filtro-chip filtro-todos-meses" id="csv-todos-meses">Todos</button>
+            </div>
+            <div class="chips" style="margin-bottom:12px;">
+                <button class="chip active" id="csv-formato-excel">Excel (;)</button>
+                <button class="chip" id="csv-formato-sheets">Sheets (,)</button>
+            </div>
+            <button class="btn-primary" id="btn-exportar-csv">📊 Exportar CSV</button>
+        </div>
+        <div class="card">
+            <div class="card-header"><span class="card-title">📝 Relatório Mensal</span></div>
+            <div class="filtro-mes" style="margin-bottom:12px;">
+                <button class="filtro-mes-btn" id="relatorio-mes-prev">◀</button>
+                <span class="filtro-mes-label" id="relatorio-mes-label">Abril 2026</span>
+                <button class="filtro-mes-btn" id="relatorio-mes-next">▶</button>
+            </div>
+            <button class="btn-primary" id="btn-gerar-relatorio">📝 Gerar Relatório</button>
+            <div id="relatorio-output" style="display:none;margin-top:12px;">
+                <pre id="relatorio-texto" class="relatorio-pre"></pre>
+                <div class="relatorio-actions">
+                    <button class="btn-secundario" id="btn-copiar-relatorio">📋 Copiar</button>
+                    <button class="btn-secundario" id="btn-compartilhar-relatorio">📤 Compartilhar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== NOTIFICAÇÕES ===== -->
+<div id="screen-notificacoes" class="screen">
+    <div class="header-sub">
+        <button class="header-btn-back" data-back="mais">← Voltar</button>
+        <h2 class="header-sub-title">Alertas & Lembretes</h2>
+    </div>
+    <div class="content-scroll">
+        <div class="card">
+            <div class="notif-status"><span class="notif-status-icon" id="notif-status-icon">🔕</span><span class="notif-status-text" id="notif-status-text">Notificações desativadas</span></div>
+            <button class="btn-primary" id="btn-ativar-notif">🔔 Ativar Notificações</button>
+        </div>
+        <div class="card">
+            <div class="card-header"><span class="card-title">⚙️ Preferências</span></div>
+            <div class="setting-row"><span class="setting-label">🔁 Alerta de Fixas</span><label class="toggle"><input type="checkbox" id="toggle-alerta-fixas" checked><span class="toggle-slider"></span></label></div>
+            <div class="setting-row"><span class="setting-label">🎯 Alerta de Metas</span><label class="toggle"><input type="checkbox" id="toggle-alerta-metas" checked><span class="toggle-slider"></span></label></div>
+            <div class="setting-row"><span class="setting-label">📊 Resumo Semanal</span><label class="toggle"><input type="checkbox" id="toggle-alerta-semanal"><span class="toggle-slider"></span></label></div>
+            <div class="setting-row"><span class="setting-label">⏰ Horário</span><select id="select-notif-hora" class="form-input" style="width:auto;"><option value="08:00">08:00</option><option value="09:00">09:00</option><option value="10:00">10:00</option><option value="12:00">12:00</option><option value="18:00">18:00</option><option value="20:00" selected>20:00</option><option value="22:00">22:00</option></select></div>
+            <button class="btn-secundario" id="btn-salvar-horario">💾 Salvar Horário</button>
+        </div>
+        <div class="card">
+            <div class="card-header"><span class="card-title">📌 Lembretes</span></div>
+            <div id="lembretes-list"></div>
+            <button class="btn-primary" id="btn-novo-lembrete" style="margin-top:12px;">➕ Novo Lembrete</button>
+        </div>
+        <div class="card">
+            <div class="card-header"><span class="card-title">📜 Histórico de Notificações</span></div>
+            <div id="notificacoes-historico-list"></div>
+            <button class="btn-secundario" id="btn-limpar-notifs" style="margin-top:8px;">🗑️ Limpar Histórico</button>
+        </div>
+    </div>
+</div>
+
+<!-- ===== CONFIGURAÇÕES ===== -->
+<div id="screen-settings" class="screen">
+    <div class="header-sub">
+        <button class="header-btn-back" data-back="dashboard">← Voltar</button>
+        <h2 class="header-sub-title">Configurações</h2>
+    </div>
+    <div class="content-scroll">
+        <!-- SALDO INICIAL -->
+        <div class="card">
+            <div class="card-header"><span class="card-title">🏦 Saldo Inicial</span></div>
+            <p class="card-desc">Informe seus saldos atuais para o app calcular corretamente desde o início.</p>
+            <div class="form-group">
+                <label class="form-label">Saldo em conta (disponível)</label>
+                <input type="text" inputmode="numeric" id="input-saldo-inicial" class="form-input" placeholder="0,00">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Total já investido</label>
+                <input type="text" inputmode="numeric" id="input-investido-inicial" class="form-input" placeholder="0,00">
+            </div>
+            <div id="saldo-inicial-status" style="margin-top:8px;"></div>
+            <button class="btn-primary" id="btn-salvar-saldo-inicial">💾 Salvar Saldo Inicial</button>
+        </div>
+        <div class="card">
+            <div class="card-header"><span class="card-title">🎨 Aparência</span></div>
+            <div class="setting-row"><span class="setting-label">🌙 Modo Escuro</span><label class="toggle"><input type="checkbox" id="toggle-dark-mode"><span class="toggle-slider"></span></label></div>
+            <div class="setting-row"><span class="setting-label">🔄 Tema Automático</span><label class="toggle"><input type="checkbox" id="toggle-auto-theme" checked><span class="toggle-slider"></span></label></div>
+            <p class="setting-desc" id="theme-auto-desc">Acompanha o sistema</p>
+        </div>
+        <div class="card">
+            <div class="card-header"><span class="card-title">🔐 Segurança</span></div>
+            <button class="btn-secundario" id="btn-alterar-pin">🔑 Alterar PIN</button>
+        </div>
+        <div class="card">
+            <div class="card-header"><span class="card-title">⚠️ Zona de Perigo</span></div>
+            <button class="btn-danger" id="btn-reset-dados">🗑️ Apagar Todos os Dados</button>
+        </div>
+        <div class="app-version">O Bolso do Fred v2.4</div>
+    </div>
+</div>
+
+<!-- ===== MODAIS ===== -->
+<!-- Modal Detalhes -->
+<div class="modal-overlay" id="modal-overlay">
+    <div class="modal">
+        <div class="modal-header"><span class="modal-title" id="modal-title">Detalhes</span><button class="modal-close" id="modal-close">✕</button></div>
+        <div class="modal-body" id="modal-body"></div>
+        <div class="modal-actions"><button class="btn-secundario" id="modal-btn-edit">✏️ Editar</button><button class="btn-danger-sm" id="modal-btn-delete">🗑️ Excluir</button></div>
+    </div>
+</div>
+<!-- Modal Confirmação -->
+<div class="modal-overlay" id="modal-confirm-overlay">
+    <div class="modal modal-confirm">
+        <p class="confirm-text" id="confirm-text">Tem certeza?</p>
+        <div class="modal-actions"><button class="btn-secundario" id="confirm-cancel">Cancelar</button><button class="btn-danger-sm" id="confirm-delete">Excluir</button></div>
+    </div>
+</div>
+<!-- Modal Meta -->
+<div class="modal-overlay" id="modal-meta-overlay">
+    <div class="modal">
+        <div class="modal-header"><span class="modal-title" id="modal-meta-title">Meta</span><button class="modal-close" id="modal-meta-close">✕</button></div>
+        <div class="modal-body">
+            <p id="meta-modal-desc" class="card-desc"></p>
+            <div class="form-group"><label class="form-label">Valor limite (mensal)</label><input type="text" inputmode="numeric" id="input-meta-valor" class="form-input" placeholder="0,00"></div>
+        </div>
+        <div class="modal-actions"><button class="btn-danger-sm" id="meta-btn-remover">🗑️ Remover</button><button class="btn-primary" id="meta-btn-salvar">💾 Salvar</button></div>
+    </div>
+</div>
+<!-- Modal Fixa -->
+<div class="modal-overlay" id="modal-fixa-overlay">
+    <div class="modal">
+        <div class="modal-header"><span class="modal-title" id="modal-fixa-title">Nova Fixa</span><button class="modal-close" id="modal-fixa-close">✕</button></div>
+        <div class="modal-body">
+            <div class="chips" id="chips-fixa-tipo" style="margin-bottom:12px;">
+                <button type="button" class="chip active" data-fixa-tipo="receita">💵 Receita</button>
+                <button type="button" class="chip" data-fixa-tipo="gasto">💸 Gasto</button>
+                <button type="button" class="chip" data-fixa-tipo="investimento">📈 Invest.</button>
+            </div>
+            <div class="form-group"><label class="form-label">Descrição *</label><input type="text" id="input-fixa-desc" class="form-input" placeholder="Ex: Salário" maxlength="40"></div>
+            <div class="form-group"><label class="form-label">Valor *</label><input type="text" inputmode="numeric" id="input-fixa-valor" class="form-input" placeholder="0,00"></div>
+            <div class="form-group"><label class="form-label">Dia do mês</label><select id="select-fixa-dia" class="form-input"></select></div>
+            <div class="form-group hidden" id="group-fixa-categoria"><label class="form-label">Categoria</label><select id="select-fixa-categoria" class="form-input"></select></div>
+            <div class="form-group hidden" id="group-fixa-tipo-inv"><label class="form-label">Tipo Investimento</label><select id="select-fixa-tipo-inv" class="form-input"><option value="cdb">🏦 CDB</option><option value="tesouro">🇧🇷 Tesouro</option><option value="fundo">📊 Fundo</option><option value="acoes">📈 Ações</option><option value="fii">🏢 FII</option><option value="cripto">₿ Cripto</option><option value="poupanca">🐷 Poupança</option><option value="previdencia">🔮 Previdência</option><option value="outro">📌 Outro</option></select></div>
+            <div class="form-group" id="group-fixa-metodo"><label class="form-label">Método</label><select id="select-fixa-metodo" class="form-input"><option value="pix">📲 Pix</option><option value="debito">💰 Débito</option><option value="credito">💳 Crédito</option><option value="boleto">📄 Boleto</option><option value="dinheiro">💵 Dinheiro</option></select></div>
+        </div>
+        <div class="modal-actions"><button class="btn-secundario" id="fixa-btn-cancelar">Cancelar</button><button class="btn-primary" id="fixa-btn-salvar">💾 Salvar</button></div>
+    </div>
+</div>
+<!-- Modal Fixa Detalhe -->
+<div class="modal-overlay" id="modal-fixa-detalhe-overlay">
+    <div class="modal">
+        <div class="modal-header"><span class="modal-title" id="modal-fixa-detalhe-title">Fixa</span><button class="modal-close" id="modal-fixa-detalhe-close">✕</button></div>
+        <div class="modal-body" id="modal-fixa-detalhe-body"></div>
+        <div class="modal-actions"><button class="btn-secundario" id="fixa-detalhe-btn-edit">✏️ Editar</button><button class="btn-danger-sm" id="fixa-detalhe-btn-delete">🗑️ Excluir</button></div>
+    </div>
+</div>
+<!-- Modal Import -->
+<div class="modal-overlay" id="modal-import-overlay">
+    <div class="modal modal-confirm">
+        <p class="confirm-text">📥 Importar Backup</p>
+        <div id="import-preview"></div>
+        <div class="modal-actions"><button class="btn-secundario" id="import-cancel">Cancelar</button><button class="btn-danger-sm" id="import-confirm">Substituir Dados</button></div>
+    </div>
+</div>
+<!-- Modal Lembrete -->
+<div class="modal-overlay" id="modal-lembrete-overlay">
+    <div class="modal">
+        <div class="modal-header"><span class="modal-title">Novo Lembrete</span><button class="modal-close" id="modal-lembrete-close">✕</button></div>
+        <div class="modal-body">
+            <div class="form-group"><label class="form-label">Título *</label><input type="text" id="input-lembrete-titulo" class="form-input" placeholder="Ex: Pagar conta de luz" maxlength="40"></div>
+            <div class="form-group"><label class="form-label">Data</label><input type="date" id="input-lembrete-data" class="form-input"></div>
+            <div class="form-group"><label class="form-label">Repetir</label><select id="select-lembrete-repetir" class="form-input"><option value="nao">Não repetir</option><option value="diario">Diário</option><option value="semanal">Semanal</option><option value="mensal">Mensal</option></select></div>
+        </div>
+        <div class="modal-actions"><button class="btn-secundario" id="lembrete-btn-cancelar">Cancelar</button><button class="btn-primary" id="lembrete-btn-salvar">💾 Salvar</button></div>
+    </div>
+</div>
+<!-- Modal Categoria -->
+<div class="modal-overlay" id="modal-categoria-overlay">
+    <div class="modal">
+        <div class="modal-header"><span class="modal-title" id="modal-categoria-title">Nova Categoria</span><button class="modal-close" id="modal-categoria-close">✕</button></div>
+        <div class="modal-body">
+            <div class="form-group"><label class="form-label">Emoji / Ícone</label><input type="text" id="input-cat-icon" class="form-input" placeholder="Ex: 🎵" maxlength="4" style="font-size:24px;text-align:center;width:60px;"></div>
+            <div class="form-group"><label class="form-label">Nome da Categoria *</label><input type="text" id="input-cat-nome" class="form-input" placeholder="Ex: Música, Pet, Assinaturas..." maxlength="20"></div>
+        </div>
+        <div class="modal-actions"><button class="btn-secundario" id="cat-btn-cancelar">Cancelar</button><button class="btn-primary" id="cat-btn-salvar">💾 Salvar</button></div>
+    </div>
+</div>
+
+<!-- ===== NAV ===== -->
+<nav class="bottom-nav" id="bottom-nav" style="display:none;">
+    <button class="nav-item active" data-nav="dashboard"><span class="nav-icon">🏠</span><span class="nav-label">Início</span></button>
+    <button class="nav-item" data-nav="historico"><span class="nav-icon">📋</span><span class="nav-label">Histórico</span></button>
+    <button class="nav-item nav-add" id="btn-add"><span class="nav-add-icon">+</span></button>
+    <button class="nav-item" data-nav="graficos"><span class="nav-icon">📊</span><span class="nav-label">Gráficos</span></button>
+    <button class="nav-item" data-nav="mais"><span class="nav-icon">≡</span><span class="nav-label">Mais</span></button>
+</nav>
+
+<script src="./app.js"></script>
+</body>
+</html>
