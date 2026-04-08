@@ -1,5 +1,6 @@
 // =======================================
-// O BOLSO DO FRED — App v2.5 (com Feedback Tátil)
+// O BOLSO DO FRED — App v3.0
+// Correção completa de lógica financeira
 // =======================================
 
 // ===== BANCO DE DADOS =====
@@ -45,6 +46,7 @@ function getMonthName(m) { return ['Janeiro','Fevereiro','Março','Abril','Maio'
 function getMonthShort(m) { return ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][m]; }
 function generateId() { return Date.now().toString(36) + Math.random().toString(36).substr(2, 9); }
 function getHojeString() { const now = new Date(); return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`; }
+function getMesAno(dataStr) { const [y, m] = dataStr.split('-').map(Number); return { mes: m - 1, ano: y }; }
 
 let toastTimer = null;
 function showToast(msg) { const t = document.getElementById('toast'); if (toastTimer) clearTimeout(toastTimer); t.classList.remove('show'); void t.offsetWidth; t.textContent = msg; t.classList.add('show'); toastTimer = setTimeout(() => { t.classList.remove('show'); toastTimer = null; }, 2500); }
@@ -52,81 +54,52 @@ function showToast(msg) { const t = document.getElementById('toast'); if (toastT
 // ===== FEEDBACK TÁTIL E SONORO (PIN) =====
 const PinFeedback = (() => {
     let audioCtx = null;
-
     function getAudioContext() {
-        if (!audioCtx) {
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        }
-        if (audioCtx.state === 'suspended') {
-            audioCtx.resume();
-        }
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
         return audioCtx;
     }
-
     function playClick(frequency, duration, volume) {
         try {
             const ctx = getAudioContext();
-            const oscillator = ctx.createOscillator();
-            const gainNode = ctx.createGain();
-            oscillator.type = 'sine';
-            oscillator.frequency.setValueAtTime(frequency, ctx.currentTime);
-            gainNode.gain.setValueAtTime(volume, ctx.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-            oscillator.connect(gainNode);
-            gainNode.connect(ctx.destination);
-            oscillator.start(ctx.currentTime);
-            oscillator.stop(ctx.currentTime + duration);
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(frequency, ctx.currentTime);
+            gain.gain.setValueAtTime(volume, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+            osc.connect(gain); gain.connect(ctx.destination);
+            osc.start(ctx.currentTime); osc.stop(ctx.currentTime + duration);
         } catch (e) { }
     }
-
     function playError() {
         try {
             const ctx = getAudioContext();
-            const oscillator = ctx.createOscillator();
-            const gainNode = ctx.createGain();
-            oscillator.type = 'square';
-            oscillator.frequency.setValueAtTime(300, ctx.currentTime);
-            oscillator.frequency.setValueAtTime(200, ctx.currentTime + 0.1);
-            gainNode.gain.setValueAtTime(0.06, ctx.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
-            oscillator.connect(gainNode);
-            gainNode.connect(ctx.destination);
-            oscillator.start(ctx.currentTime);
-            oscillator.stop(ctx.currentTime + 0.2);
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(300, ctx.currentTime);
+            osc.frequency.setValueAtTime(200, ctx.currentTime + 0.1);
+            gain.gain.setValueAtTime(0.06, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+            osc.connect(gain); gain.connect(ctx.destination);
+            osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.2);
         } catch (e) { }
     }
-
     function playSuccess() {
         try {
-            const ctx = getAudioContext();
-            const now = ctx.currentTime;
-            const osc1 = ctx.createOscillator();
-            const gain1 = ctx.createGain();
-            osc1.type = 'sine';
-            osc1.frequency.setValueAtTime(880, now);
-            gain1.gain.setValueAtTime(0.07, now);
-            gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
-            osc1.connect(gain1);
-            gain1.connect(ctx.destination);
-            osc1.start(now);
-            osc1.stop(now + 0.12);
-            const osc2 = ctx.createOscillator();
-            const gain2 = ctx.createGain();
-            osc2.type = 'sine';
-            osc2.frequency.setValueAtTime(1320, now + 0.1);
-            gain2.gain.setValueAtTime(0.07, now + 0.1);
-            gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
-            osc2.connect(gain2);
-            gain2.connect(ctx.destination);
-            osc2.start(now + 0.1);
-            osc2.stop(now + 0.25);
+            const ctx = getAudioContext(); const now = ctx.currentTime;
+            const osc1 = ctx.createOscillator(); const gain1 = ctx.createGain();
+            osc1.type = 'sine'; osc1.frequency.setValueAtTime(880, now);
+            gain1.gain.setValueAtTime(0.07, now); gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+            osc1.connect(gain1); gain1.connect(ctx.destination); osc1.start(now); osc1.stop(now + 0.12);
+            const osc2 = ctx.createOscillator(); const gain2 = ctx.createGain();
+            osc2.type = 'sine'; osc2.frequency.setValueAtTime(1320, now + 0.1);
+            gain2.gain.setValueAtTime(0.07, now + 0.1); gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+            osc2.connect(gain2); gain2.connect(ctx.destination); osc2.start(now + 0.1); osc2.stop(now + 0.25);
         } catch (e) { }
     }
-
-    function vibrate(pattern) {
-        try { if (navigator.vibrate) navigator.vibrate(pattern); } catch (e) { }
-    }
-
+    function vibrate(pattern) { try { if (navigator.vibrate) navigator.vibrate(pattern); } catch (e) { } }
     return {
         tapKey() { vibrate(30); playClick(1800, 0.03, 0.08); },
         tapDelete() { vibrate(20); playClick(1200, 0.025, 0.05); },
@@ -204,6 +177,71 @@ function applyMoneyMask(input) {
     });
 }
 
+// ===== CÁLCULO FINANCEIRO CENTRALIZADO =====
+// Toda a lógica de saldos é calculada aqui para evitar inconsistências
+function calcularFinancas(registros, saldoInicial, dataLimite) {
+    let receitas = 0, gastos = 0, investimentos = 0, resgates = 0;
+
+    registros.forEach(r => {
+        if (dataLimite && r.data > dataLimite) return;
+        switch (r.tipo) {
+            case 'receita': receitas += r.valor; break;
+            case 'gasto': gastos += r.valor; break;
+            case 'investimento': investimentos += r.valor; break;
+            case 'resgate': resgates += r.valor; break;
+        }
+    });
+
+    // LÓGICA CORRETA:
+    // Saldo livre = dinheiro disponível na conta
+    //   = saldo_inicial_conta + receitas - gastos - investimentos + resgates
+    // Total investido = dinheiro aplicado
+    //   = saldo_inicial_investido + investimentos - resgates
+    // Patrimônio = tudo que você tem
+    //   = saldo_livre + total_investido
+    const saldoLivre = saldoInicial.conta + receitas - gastos - investimentos + resgates;
+    const totalInvestido = saldoInicial.investido + investimentos - resgates;
+    const patrimonio = saldoLivre + totalInvestido;
+
+    return { receitas, gastos, investimentos, resgates, saldoLivre, totalInvestido, patrimonio };
+}
+
+function calcularFinancasMes(registros, mes, ano) {
+    let receitas = 0, gastos = 0, investimentos = 0, resgates = 0;
+
+    registros.forEach(r => {
+        const { mes: rMes, ano: rAno } = getMesAno(r.data);
+        if (rAno !== ano || rMes !== mes) return;
+        switch (r.tipo) {
+            case 'receita': receitas += r.valor; break;
+            case 'gasto': gastos += r.valor; break;
+            case 'investimento': investimentos += r.valor; break;
+            case 'resgate': resgates += r.valor; break;
+        }
+    });
+
+    return { receitas, gastos, investimentos, resgates, saldo: receitas - gastos - investimentos + resgates };
+}
+
+// ===== VERIFICAÇÃO DE FIXAS (LÓGICA MELHORADA) =====
+// Verifica se uma fixa já foi "cumprida" no mês, independente de mudança de data
+function fixaJaCumpridaNoMes(registros, fixaId, mes, ano) {
+    return registros.some(r => {
+        if (r.fixaId !== fixaId) return false;
+        const { mes: rMes, ano: rAno } = getMesAno(r.data);
+        return rAno === ano && rMes === mes;
+    });
+}
+
+// Retorna o registro da fixa no mês (se existir)
+function getRegistroFixaNoMes(registros, fixaId, mes, ano) {
+    return registros.find(r => {
+        if (r.fixaId !== fixaId) return false;
+        const { mes: rMes, ano: rAno } = getMesAno(r.data);
+        return rAno === ano && rMes === mes;
+    });
+}
+
 // ===== NAVEGAÇÃO =====
 let currentScreen = 'screen-pin';
 let previousScreen = 'screen-dashboard';
@@ -275,11 +313,7 @@ function handlePinKey(key) {
     const dots = document.querySelectorAll('#pin-dots .dot');
     const errorEl = document.getElementById('pin-error');
     if (key === 'delete') {
-        if (pinBuffer.length > 0) {
-            pinBuffer = pinBuffer.slice(0, -1);
-            dots[pinBuffer.length].classList.remove('filled');
-            PinFeedback.tapDelete();
-        }
+        if (pinBuffer.length > 0) { pinBuffer = pinBuffer.slice(0, -1); dots[pinBuffer.length].classList.remove('filled'); PinFeedback.tapDelete(); }
         return;
     }
     if (pinBuffer.length >= 4) return;
@@ -308,11 +342,7 @@ function handleCreatePinKey(key) {
     const errorEl = document.getElementById('create-pin-error');
     const subtitle = document.getElementById('create-pin-subtitle');
     if (key === 'delete') {
-        if (createPinBuffer.length > 0) {
-            createPinBuffer = createPinBuffer.slice(0, -1);
-            dots[createPinBuffer.length].classList.remove('filled');
-            PinFeedback.tapDelete();
-        }
+        if (createPinBuffer.length > 0) { createPinBuffer = createPinBuffer.slice(0, -1); dots[createPinBuffer.length].classList.remove('filled'); PinFeedback.tapDelete(); }
         return;
     }
     if (createPinBuffer.length >= 4) return;
@@ -386,7 +416,7 @@ function updateSaldoInicialStatus(conta, investido) {
     }
 }
 
-// ===== DASHBOARD =====
+// ===== DASHBOARD (LÓGICA CORRIGIDA) =====
 async function updateDashboard() {
     const registros = await dbGetAll('registros');
     const saldoInicial = await getSaldoInicial();
@@ -396,35 +426,18 @@ async function updateDashboard() {
     const hoje = getHojeString();
     document.getElementById('mes-atual').textContent = getMonthName(mesAtual);
 
-    let tRec = 0, tGas = 0, tInv = 0, tRes = 0;
-    let tRecAll = 0, tGasAll = 0, tInvAll = 0, tResAll = 0;
+    // Cálculo global (até hoje) usando função centralizada
+    const global = calcularFinancas(registros, saldoInicial, hoje);
 
-    registros.forEach(r => {
-        const [y, m] = r.data.split('-').map(Number);
-        if (r.data <= hoje) {
-            if (r.tipo === 'receita') tRecAll += r.valor;
-            if (r.tipo === 'gasto') tGasAll += r.valor;
-            if (r.tipo === 'investimento') tInvAll += r.valor;
-            if (r.tipo === 'resgate') tResAll += r.valor;
-        }
-        if (y === anoAtual && (m - 1) === mesAtual) {
-            if (r.tipo === 'receita') tRec += r.valor;
-            if (r.tipo === 'gasto') tGas += r.valor;
-            if (r.tipo === 'investimento') tInv += r.valor;
-            if (r.tipo === 'resgate') tRes += r.valor;
-        }
-    });
+    // Cálculo do mês atual
+    const doMes = calcularFinancasMes(registros, mesAtual, anoAtual);
 
-    const saldoLivre = saldoInicial.conta + tRecAll - tGasAll + tResAll;
-    const totalInvestido = saldoInicial.investido + tInvAll - tResAll;
-    const patrimonio = saldoLivre + totalInvestido;
-
-    document.getElementById('patrimonio-total').textContent = formatMoney(patrimonio);
-    document.getElementById('saldo-livre').textContent = formatMoney(saldoLivre);
-    document.getElementById('total-investido').textContent = formatMoney(totalInvestido);
-    document.getElementById('total-receitas').textContent = '+ ' + formatMoney(tRec);
-    document.getElementById('total-gastos').textContent = '- ' + formatMoney(tGas);
-    document.getElementById('total-investido-mes').textContent = '→ ' + formatMoney(tInv);
+    document.getElementById('patrimonio-total').textContent = formatMoney(global.patrimonio);
+    document.getElementById('saldo-livre').textContent = formatMoney(global.saldoLivre);
+    document.getElementById('total-investido').textContent = formatMoney(global.totalInvestido);
+    document.getElementById('total-receitas').textContent = '+ ' + formatMoney(doMes.receitas);
+    document.getElementById('total-gastos').textContent = '- ' + formatMoney(doMes.gastos);
+    document.getElementById('total-investido-mes').textContent = '→ ' + formatMoney(doMes.investimentos);
 
     const ultimas = [...registros].sort((a, b) => {
         if (b.data !== a.data) return b.data.localeCompare(a.data);
@@ -438,7 +451,7 @@ async function updateDashboard() {
         listEl.querySelectorAll('.mov-item').forEach(i => i.addEventListener('click', () => openDetalhe(i.dataset.id)));
     }
     await updateFixasPendentes();
-    await updateOrcamentoPreview(tGas);
+    await updateOrcamentoPreview(doMes.gastos);
 }
 
 function renderMovItem(r) {
@@ -518,6 +531,16 @@ async function salvarRegistro() {
     if (tipoRegistro === 'gasto') { reg.categoria = document.getElementById('select-categoria').value; reg.metodo = metodoSelecionado; }
     else if (tipoRegistro === 'receita') { reg.metodo = metodoSelecionado; }
     else if (tipoRegistro === 'investimento' || tipoRegistro === 'resgate') { reg.tipoInvestimento = document.getElementById('select-tipo-investimento').value; }
+
+    // Preservar fixaId e fixaRecorrente se estiver editando um registro de fixa
+    if (editingId) {
+        const existing = await dbGet('registros', editingId);
+        if (existing && existing.fixaId) {
+            reg.fixaId = existing.fixaId;
+            reg.fixaRecorrente = true;
+        }
+    }
+
     await dbPut('registros', reg);
     showToast(editingId ? '✅ Atualizado!' : '✅ Salvo!');
     editingId = null;
@@ -617,7 +640,7 @@ async function updateHistorico() {
     document.getElementById('filtro-mes-label').textContent = `${getMonthName(filtroMes)} ${filtroAno}`;
     document.getElementById('filtro-todos-meses').classList.toggle('active', filtroTodosMeses);
     let filtered = registros;
-    if (!filtroTodosMeses) filtered = filtered.filter(r => { const [y, m] = r.data.split('-').map(Number); return y === filtroAno && (m - 1) === filtroMes; });
+    if (!filtroTodosMeses) filtered = filtered.filter(r => { const { mes, ano } = getMesAno(r.data); return ano === filtroAno && mes === filtroMes; });
     if (filtroTipo !== 'todos') filtered = filtered.filter(r => r.tipo === filtroTipo);
     filtered.sort((a, b) => { if (b.data !== a.data) return b.data.localeCompare(a.data); return (b.timestamp || 0) - (a.timestamp || 0); });
     let soma = 0; filtered.forEach(r => { if (r.tipo === 'receita' || r.tipo === 'resgate') soma += r.valor; else soma -= r.valor; });
@@ -679,7 +702,7 @@ async function updateMetas() {
     const orcConfig = await dbGet('config', 'orcamento-geral'); const orcamento = orcConfig ? orcConfig.valor : 0;
     if (orcamento > 0) document.getElementById('input-orcamento-geral').value = Number(orcamento).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
     let totalGastosMes = 0; const gastosPorCat = {};
-    registros.forEach(r => { const [y, m] = r.data.split('-').map(Number); if (r.tipo === 'gasto' && y === anoAtual && (m - 1) === mesAtual) { totalGastosMes += r.valor; gastosPorCat[r.categoria] = (gastosPorCat[r.categoria] || 0) + r.valor; } });
+    registros.forEach(r => { const { mes, ano } = getMesAno(r.data); if (r.tipo === 'gasto' && ano === anoAtual && mes === mesAtual) { totalGastosMes += r.valor; gastosPorCat[r.categoria] = (gastosPorCat[r.categoria] || 0) + r.valor; } });
     const statusEl = document.getElementById('orcamento-status');
     if (orcamento > 0) { const pct = (totalGastosMes / orcamento) * 100; const lv = pct >= 100 ? 'danger' : pct >= 75 ? 'warning' : 'safe'; statusEl.innerHTML = renderProgress('Gasto do mês', totalGastosMes, orcamento, pct, lv); } else statusEl.innerHTML = '';
     const cats = categoriasCache.map(c => c.id);
@@ -717,13 +740,13 @@ async function updateOrcamentoPreview(totalGastosMes) {
     if (orcamento <= 0 && !hasMetas) { cardEl.style.display = 'none'; return; } cardEl.style.display = '';
     if (orcamento > 0) { const pct = (totalGastosMes / orcamento) * 100; const lv = pct >= 100 ? 'danger' : pct >= 75 ? 'warning' : 'safe'; document.getElementById('orcamento-geral').innerHTML = renderProgress('Orçamento Geral', totalGastosMes, orcamento, pct, lv); } else document.getElementById('orcamento-geral').innerHTML = '';
     const previewEl = document.getElementById('metas-preview'); const registros = await dbGetAll('registros'); const now = new Date(); const gastosPorCat = {};
-    registros.forEach(r => { const [y, m] = r.data.split('-').map(Number); if (r.tipo === 'gasto' && y === now.getFullYear() && (m - 1) === now.getMonth()) gastosPorCat[r.categoria] = (gastosPorCat[r.categoria] || 0) + r.valor; });
+    registros.forEach(r => { const { mes, ano } = getMesAno(r.data); if (r.tipo === 'gasto' && ano === now.getFullYear() && mes === now.getMonth()) gastosPorCat[r.categoria] = (gastosPorCat[r.categoria] || 0) + r.valor; });
     const metasAtivas = Object.entries(metas).filter(([_, v]) => v > 0);
     if (metasAtivas.length === 0) { previewEl.innerHTML = ''; return; }
     previewEl.innerHTML = metasAtivas.slice(0, 3).map(([cat, meta]) => { const info = getCategoriaInfo(cat); const g = gastosPorCat[cat] || 0; const pct = Math.min((g / meta) * 100, 100); const lv = pct >= 100 ? 'danger' : pct >= 75 ? 'warning' : 'safe'; return `<div class="meta-preview-item"><span class="meta-preview-icon">${info.icon}</span><div class="meta-preview-info"><div class="meta-preview-name">${info.label}</div><div class="meta-preview-bar"><div class="meta-preview-fill ${lv}" style="width:${pct}%"></div></div></div><span class="meta-preview-valor">${formatMoney(g)}</span></div>`; }).join('');
 }
 
-// ===== FIXAS =====
+// ===== FIXAS (LÓGICA MELHORADA) =====
 let filtroFixaTipo = 'todos', editingFixaId = null, currentFixaDetalheId = null;
 
 function initFixas() {
@@ -783,6 +806,7 @@ async function salvarFixa() {
     if (tipo === 'gasto') { fixa.categoria = document.getElementById('select-fixa-categoria').value; fixa.metodo = document.getElementById('select-fixa-metodo').value; }
     else if (tipo === 'investimento') { fixa.tipoInvestimento = document.getElementById('select-fixa-tipo-inv').value; }
     else { fixa.metodo = document.getElementById('select-fixa-metodo').value; }
+
     if (editingFixaId) await removerRegistrosFuturosFixa(editingFixaId);
     await dbPut('fixas', fixa);
     await gerarRegistrosRecorrentes(fixa);
@@ -792,17 +816,33 @@ async function salvarFixa() {
     if (currentScreen === 'screen-dashboard') await updateDashboard();
 }
 
+// GERAÇÃO DE RECORRENTES (MELHORADA)
+// Agora verifica por fixaId + mês/ano, não depende do dia exato
 async function gerarRegistrosRecorrentes(fixa, meses = 12) {
-    const now = new Date(); const registros = await dbGetAll('registros');
+    const now = new Date();
+    const registros = await dbGetAll('registros');
+
     for (let i = 0; i < meses; i++) {
         const mes = (now.getMonth() + i) % 12;
         const ano = now.getFullYear() + Math.floor((now.getMonth() + i) / 12);
+
+        // Verifica se já existe registro dessa fixa nesse mês (qualquer dia)
+        if (fixaJaCumpridaNoMes(registros, fixa.id, mes, ano)) continue;
+
         const diasNoMes = new Date(ano, mes + 1, 0).getDate();
         const dia = Math.min(fixa.dia, diasNoMes);
         const ds = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
-        const jaExiste = registros.some(r => { if (r.fixaId !== fixa.id) return false; const [ry, rm] = r.data.split('-').map(Number); return ry === ano && (rm - 1) === mes; });
-        if (jaExiste) continue;
-        const reg = { id: generateId(), tipo: fixa.tipo, valor: fixa.valor, data: ds, descricao: fixa.descricao, fixaId: fixa.id, fixaRecorrente: true, timestamp: Date.now() };
+
+        const reg = {
+            id: generateId(),
+            tipo: fixa.tipo,
+            valor: fixa.valor,
+            data: ds,
+            descricao: fixa.descricao,
+            fixaId: fixa.id,
+            fixaRecorrente: true,
+            timestamp: Date.now()
+        };
         if (fixa.tipo === 'gasto') { reg.categoria = fixa.categoria; reg.metodo = fixa.metodo; }
         if (fixa.tipo === 'receita') { reg.metodo = fixa.metodo; }
         if (fixa.tipo === 'investimento') { reg.tipoInvestimento = fixa.tipoInvestimento; }
@@ -810,10 +850,24 @@ async function gerarRegistrosRecorrentes(fixa, meses = 12) {
     }
 }
 
-async function removerRegistrosFuturosFixa(fixaId) { const registros = await dbGetAll('registros'); const hoje = getHojeString(); for (const r of registros) { if (r.fixaId === fixaId && r.fixaRecorrente && r.data > hoje) await dbDelete('registros', r.id); } }
-async function findRegistroByFixaId(fid) { const regs = await dbGetAll('registros'); const now = new Date(); return regs.find(r => { if (r.fixaId !== fid) return false; const [y, m] = r.data.split('-').map(Number); return y === now.getFullYear() && (m - 1) === now.getMonth(); }); }
+async function removerRegistrosFuturosFixa(fixaId) {
+    const registros = await dbGetAll('registros');
+    const hoje = getHojeString();
+    for (const r of registros) {
+        if (r.fixaId === fixaId && r.fixaRecorrente && r.data > hoje) {
+            await dbDelete('registros', r.id);
+        }
+    }
+}
+
 async function aplicarFixaIndividual(fixa) { await gerarRegistrosRecorrentes(fixa, 12); }
-async function reverterFixaIndividual(fid) { const registros = await dbGetAll('registros'); for (const r of registros) { if (r.fixaId === fid && r.fixaRecorrente) await dbDelete('registros', r.id); } }
+
+async function reverterFixaIndividual(fid) {
+    const registros = await dbGetAll('registros');
+    for (const r of registros) {
+        if (r.fixaId === fid && r.fixaRecorrente) await dbDelete('registros', r.id);
+    }
+}
 
 async function aplicarTodasFixas() {
     const fixas = await dbGetAll('fixas');
@@ -825,8 +879,10 @@ async function aplicarTodasFixas() {
 
 async function openFixaDetalhe(id) {
     const fixa = await dbGet('fixas', id); if (!fixa) return; currentFixaDetalheId = id;
-    const isAp = !!(await findRegistroByFixaId(fixa.id));
-    const now = new Date(); const mesLabel = getMonthName(now.getMonth()) + ' ' + now.getFullYear();
+    const registros = await dbGetAll('registros');
+    const now = new Date();
+    const isAp = fixaJaCumpridaNoMes(registros, fixa.id, now.getMonth(), now.getFullYear());
+    const mesLabel = getMonthName(now.getMonth()) + ' ' + now.getFullYear();
     const body = document.getElementById('modal-fixa-detalhe-body');
     let html = `<div class="detalhe-valor-destaque ${fixa.tipo}">${formatMoney(fixa.valor)}</div>`;
     html += `<div class="detalhe-row"><span class="detalhe-label">Descrição</span><span class="detalhe-value">${fixa.descricao}</span></div>`;
@@ -852,7 +908,7 @@ async function openFixaDetalhe(id) {
 async function editarFixa() { if (!currentFixaDetalheId) return; const f = await dbGet('fixas', currentFixaDetalheId); closeFixaDetalhe(); if (f) openFixaModal(f); }
 async function excluirFixa() {
     if (!currentFixaDetalheId) return;
-    await removerRegistrosFuturosFixa(currentFixaDetalheId);
+    // Remove TODOS os registros dessa fixa (passados e futuros)
     const registros = await dbGetAll('registros');
     for (const r of registros) { if (r.fixaId === currentFixaDetalheId && r.fixaRecorrente) await dbDelete('registros', r.id); }
     await dbDelete('fixas', currentFixaDetalheId);
@@ -861,14 +917,24 @@ async function excluirFixa() {
 }
 
 async function updateFixas() {
-    const fixas = await dbGetAll('fixas'); const now = new Date(); const mesAtual = now.getMonth(); const anoAtual = now.getFullYear();
+    const fixas = await dbGetAll('fixas');
+    const now = new Date(); const mesAtual = now.getMonth(); const anoAtual = now.getFullYear();
     const registros = await dbGetAll('registros');
-    const aplicadas = new Set(); registros.forEach(r => { if (r.fixaId) { const [y, m] = r.data.split('-').map(Number); if (y === anoAtual && (m - 1) === mesAtual) aplicadas.add(r.fixaId); } });
-    let filtered = fixas.filter(f => f.ativa !== false); if (filtroFixaTipo !== 'todos') filtered = filtered.filter(f => f.tipo === filtroFixaTipo);
+
+    // Usa a função centralizada para verificar se fixa foi cumprida
+    const aplicadasSet = new Set();
+    fixas.forEach(f => {
+        if (fixaJaCumpridaNoMes(registros, f.id, mesAtual, anoAtual)) {
+            aplicadasSet.add(f.id);
+        }
+    });
+
+    let filtered = fixas.filter(f => f.ativa !== false);
+    if (filtroFixaTipo !== 'todos') filtered = filtered.filter(f => f.tipo === filtroFixaTipo);
     const listEl = document.getElementById('fixas-list');
     if (filtered.length === 0) listEl.innerHTML = '<div class="empty-state"><span class="empty-icon">🔁</span><p>Nenhuma fixa cadastrada.</p></div>';
     else {
-        listEl.innerHTML = filtered.map(f => { const isAp = aplicadas.has(f.id); const badge = isAp ? '<span class="fixa-status-badge aplicada">✅</span>' : '<span class="fixa-status-badge pendente">⏳</span>'; return `<div class="fixa-item" data-id="${f.id}"><div class="fixa-icon ${f.tipo}">${f.tipo === 'gasto' ? getCategoriaInfo(f.categoria).icon : f.tipo === 'investimento' ? getInvestimentoInfo(f.tipoInvestimento).icon : '💵'}</div><div class="fixa-info"><div class="fixa-desc">${f.descricao}</div><div class="fixa-meta">Dia ${f.dia} · ${badge}</div></div><div class="fixa-valor ${f.tipo}">${formatMoney(f.valor)}</div></div>`; }).join('');
+        listEl.innerHTML = filtered.map(f => { const isAp = aplicadasSet.has(f.id); const badge = isAp ? '<span class="fixa-status-badge aplicada">✅</span>' : '<span class="fixa-status-badge pendente">⏳</span>'; return `<div class="fixa-item" data-id="${f.id}"><div class="fixa-icon ${f.tipo}">${f.tipo === 'gasto' ? getCategoriaInfo(f.categoria).icon : f.tipo === 'investimento' ? getInvestimentoInfo(f.tipoInvestimento).icon : '💵'}</div><div class="fixa-info"><div class="fixa-desc">${f.descricao}</div><div class="fixa-meta">Dia ${f.dia} · ${badge}</div></div><div class="fixa-valor ${f.tipo}">${formatMoney(f.valor)}</div></div>`; }).join('');
         listEl.querySelectorAll('.fixa-item').forEach(i => i.addEventListener('click', () => openFixaDetalhe(i.dataset.id)));
     }
     const todas = fixas.filter(f => f.ativa !== false);
@@ -876,7 +942,7 @@ async function updateFixas() {
     const tG = todas.filter(f => f.tipo === 'gasto').reduce((s, f) => s + f.valor, 0);
     const tI = todas.filter(f => f.tipo === 'investimento').reduce((s, f) => s + f.valor, 0);
     document.getElementById('fixas-totais').innerHTML = `<div class="fixas-total-row"><span class="fixas-total-label">Receitas fixas</span><span class="fixas-total-valor receita">+ ${formatMoney(tR)}</span></div><div class="fixas-total-row"><span class="fixas-total-label">Gastos fixos</span><span class="fixas-total-valor gasto">- ${formatMoney(tG)}</span></div>${tI > 0 ? `<div class="fixas-total-row"><span class="fixas-total-label">Invest. fixos</span><span class="fixas-total-valor investimento">→ ${formatMoney(tI)}</span></div>` : ''}<div class="fixas-total-row"><span class="fixas-total-label"><strong>Saldo fixo</strong></span><span class="fixas-total-valor">${formatMoney(tR - tG - tI)}</span></div>`;
-    const pends = todas.filter(f => !aplicadas.has(f.id));
+    const pends = todas.filter(f => !aplicadasSet.has(f.id));
     const cardPF = document.getElementById('card-fixas-pend-full');
     if (pends.length > 0) {
         cardPF.style.display = '';
@@ -886,9 +952,11 @@ async function updateFixas() {
 }
 
 async function updateFixasPendentes() {
-    const fixas = await dbGetAll('fixas'); const registros = await dbGetAll('registros'); const now = new Date();
-    const aplicadas = new Set(); registros.forEach(r => { if (r.fixaId) { const [y, m] = r.data.split('-').map(Number); if (y === now.getFullYear() && (m - 1) === now.getMonth()) aplicadas.add(r.fixaId); } });
-    const pends = fixas.filter(f => f.ativa !== false && !aplicadas.has(f.id));
+    const fixas = await dbGetAll('fixas');
+    const registros = await dbGetAll('registros');
+    const now = new Date();
+
+    const pends = fixas.filter(f => f.ativa !== false && !fixaJaCumpridaNoMes(registros, f.id, now.getMonth(), now.getFullYear()));
     const cardEl = document.getElementById('card-fixas-pendentes');
     if (pends.length === 0) { cardEl.style.display = 'none'; return; }
     cardEl.style.display = '';
@@ -896,7 +964,7 @@ async function updateFixasPendentes() {
     document.getElementById('fixas-pendentes-list').querySelectorAll('.fixa-pend-item').forEach(el => { el.addEventListener('click', async () => { const fx = fixas.find(f => f.id === el.dataset.id); if (fx) { await aplicarFixaIndividual(fx); showToast(`✅ "${fx.descricao}" aplicada!`); await updateFixasPendentes(); await updateDashboard(); } }); });
 }
 
-// ===== GRÁFICOS =====
+// ===== GRÁFICOS (LÓGICA CORRIGIDA) =====
 let graficoMes = new Date().getMonth(), graficoAno = new Date().getFullYear();
 
 function initGraficos() {
@@ -907,16 +975,16 @@ function initGraficos() {
 async function updateGraficos() {
     const registros = await dbGetAll('registros');
     document.getElementById('grafico-mes-label').textContent = `${getMonthName(graficoMes)} ${graficoAno}`;
-    const doMes = registros.filter(r => { const [y, m] = r.data.split('-').map(Number); return y === graficoAno && (m - 1) === graficoMes; });
-    let tRec = 0, tGas = 0, tInv = 0;
-    doMes.forEach(r => { if (r.tipo === 'receita') tRec += r.valor; if (r.tipo === 'gasto') tGas += r.valor; if (r.tipo === 'investimento') tInv += r.valor; });
+
+    const doMes = calcularFinancasMes(registros, graficoMes, graficoAno);
+    const tRec = doMes.receitas, tGas = doMes.gastos, tInv = doMes.investimentos;
 
     const maxVal = Math.max(tRec, tGas, tInv, 1);
     const saldo = tRec - tGas - tInv;
     document.getElementById('grafico-balanco').innerHTML = `<div class="balanco-row"><span class="balanco-icon">💵</span><div class="balanco-info"><span class="balanco-label">Receitas</span><div class="balanco-bar-bg"><div class="balanco-bar-fill receita" style="width:${(tRec / maxVal) * 100}%"></div></div></div><span class="balanco-valor receita">${formatMoney(tRec)}</span></div><div class="balanco-row"><span class="balanco-icon">💸</span><div class="balanco-info"><span class="balanco-label">Gastos</span><div class="balanco-bar-bg"><div class="balanco-bar-fill gasto" style="width:${(tGas / maxVal) * 100}%"></div></div></div><span class="balanco-valor gasto">${formatMoney(tGas)}</span></div><div class="balanco-row"><span class="balanco-icon">📈</span><div class="balanco-info"><span class="balanco-label">Investido</span><div class="balanco-bar-bg"><div class="balanco-bar-fill investimento" style="width:${(tInv / maxVal) * 100}%"></div></div></div><span class="balanco-valor investimento">${formatMoney(tInv)}</span></div><div class="balanco-saldo"><span class="balanco-saldo-label">Saldo do Mês</span><span class="balanco-saldo-valor ${saldo >= 0 ? 'positivo' : 'negativo'}">${formatMoney(saldo)}</span></div>`;
 
     const gastosPorCat = {};
-    doMes.filter(r => r.tipo === 'gasto').forEach(r => { gastosPorCat[r.categoria] = (gastosPorCat[r.categoria] || 0) + r.valor; });
+    registros.filter(r => { const { mes, ano } = getMesAno(r.data); return r.tipo === 'gasto' && ano === graficoAno && mes === graficoMes; }).forEach(r => { gastosPorCat[r.categoria] = (gastosPorCat[r.categoria] || 0) + r.valor; });
     const pizzaContainer = document.getElementById('grafico-pizza-container');
     const catEntries = Object.entries(gastosPorCat).sort((a, b) => b[1] - a[1]);
     if (catEntries.length === 0) pizzaContainer.innerHTML = '<div class="empty-state"><span class="empty-icon">🥧</span><p>Sem gastos neste mês</p></div>';
@@ -931,13 +999,17 @@ async function updateGraficos() {
 
     const barrasContainer = document.getElementById('grafico-barras-container');
     const meses6 = [];
-    for (let i = 5; i >= 0; i--) { let mm = graficoMes - i, yy = graficoAno; if (mm < 0) { mm += 12; yy--; } let rec = 0, gas = 0, inv = 0; registros.forEach(r => { const [ry, rm] = r.data.split('-').map(Number); if (ry === yy && (rm - 1) === mm) { if (r.tipo === 'receita') rec += r.valor; if (r.tipo === 'gasto') gas += r.valor; if (r.tipo === 'investimento') inv += r.valor; } }); meses6.push({ label: getMonthShort(mm), rec, gas, inv }); }
+    for (let i = 5; i >= 0; i--) {
+        let mm = graficoMes - i, yy = graficoAno; if (mm < 0) { mm += 12; yy--; }
+        const m = calcularFinancasMes(registros, mm, yy);
+        meses6.push({ label: getMonthShort(mm), rec: m.receitas, gas: m.gastos, inv: m.investimentos });
+    }
     const maxBarra = Math.max(...meses6.flatMap(m => [m.rec, m.gas, m.inv]), 1);
     barrasContainer.innerHTML = meses6.map(m => { const hR = Math.max((m.rec / maxBarra) * 120, 2); const hG = Math.max((m.gas / maxBarra) * 120, 2); const hI = Math.max((m.inv / maxBarra) * 120, 2); return `<div class="barra-grupo"><div class="barra-conjunto"><div class="barra receita" style="height:${hR}px"></div><div class="barra gasto" style="height:${hG}px"></div><div class="barra investimento" style="height:${hI}px"></div></div><span class="barra-label">${m.label}</span></div>`; }).join('');
 
     await updateGraficoPatrimonio(registros);
 
-    const topGastos = doMes.filter(r => r.tipo === 'gasto').sort((a, b) => b.valor - a.valor).slice(0, 5);
+    const topGastos = registros.filter(r => { const { mes, ano } = getMesAno(r.data); return r.tipo === 'gasto' && ano === graficoAno && mes === graficoMes; }).sort((a, b) => b.valor - a.valor).slice(0, 5);
     const topList = document.getElementById('grafico-top-list');
     if (topGastos.length === 0) topList.innerHTML = '<div class="empty-state"><span class="empty-icon">🏆</span><p>Sem gastos neste mês</p></div>';
     else { const topMax = topGastos[0].valor; topList.innerHTML = topGastos.map((r, i) => { const info = getCategoriaInfo(r.categoria); const pct = (r.valor / topMax) * 100; return `<div class="top-item"><span class="top-rank">${i + 1}º</span><span class="top-icon">${info.icon}</span><div class="top-info"><div class="top-desc">${r.descricao || info.label}</div><div class="top-cat">${info.label} · ${formatDate(r.data)}</div><div class="top-bar-bg"><div class="top-bar-fill" style="width:${pct}%"></div></div></div><span class="top-valor">${formatMoney(r.valor)}</span></div>`; }).join(''); }
@@ -954,17 +1026,8 @@ async function updateGraficoPatrimonio(registros) {
         const ultimoDia = new Date(yy, mm + 1, 0).getDate();
         const dataLimite = `${yy}-${String(mm + 1).padStart(2, '0')}-${String(ultimoDia).padStart(2, '0')}`;
         const dataEfetiva = dataLimite <= hoje ? dataLimite : hoje;
-        let recT = 0, gasT = 0, invT = 0, resT = 0;
-        registros.forEach(r => {
-            if (r.data <= dataEfetiva) {
-                if (r.tipo === 'receita') recT += r.valor;
-                if (r.tipo === 'gasto') gasT += r.valor;
-                if (r.tipo === 'investimento') invT += r.valor;
-                if (r.tipo === 'resgate') resT += r.valor;
-            }
-        });
-        const pat = saldoInicial.conta + saldoInicial.investido + (recT - gasT + resT) + (invT - resT);
-        pontos.push({ label: getMonthShort(mm), valor: pat });
+        const fin = calcularFinancas(registros, saldoInicial, dataEfetiva);
+        pontos.push({ label: getMonthShort(mm), valor: fin.patrimonio });
     }
     const container = document.getElementById('grafico-patrimonio-container');
     const minVal = Math.min(...pontos.map(p => p.valor));
@@ -995,19 +1058,12 @@ async function updateProjecao(registros) {
         return;
     }
 
-    let recT = 0, gasT = 0, invT = 0, resT = 0;
-    registros.forEach(r => {
-        if (r.data <= hoje) {
-            if (r.tipo === 'receita') recT += r.valor;
-            if (r.tipo === 'gasto') gasT += r.valor;
-            if (r.tipo === 'investimento') invT += r.valor;
-            if (r.tipo === 'resgate') resT += r.valor;
-        }
-    });
-    const patrimonioAtual = saldoInicial.conta + saldoInicial.investido + (recT - gasT + resT) + (invT - resT);
+    const finAtual = calcularFinancas(registros, saldoInicial, hoje);
+    const patrimonioAtual = finAtual.patrimonio;
 
     let recFixas = 0, gasFixas = 0, invFixas = 0;
     fixasAtivas.forEach(f => { if (f.tipo === 'receita') recFixas += f.valor; if (f.tipo === 'gasto') gasFixas += f.valor; if (f.tipo === 'investimento') invFixas += f.valor; });
+    // Saldo fixo mensal = receitas - gastos (investimentos não reduzem patrimônio, só movem entre contas)
     const saldoFixoMensal = recFixas - gasFixas;
 
     const projecao = [];
@@ -1152,7 +1208,7 @@ async function updateDadosScreen() {
 async function exportarJSON() {
     const registros = await dbGetAll('registros'); const fixas = await dbGetAll('fixas'); const configs = {};
     try { for (const k of ['pin', 'orcamento-geral', 'metas-categorias', 'theme', 'saldo-inicial', 'categorias-custom']) { const c = await dbGet('config', k); if (c) configs[k] = c; } } catch (e) { }
-    const backup = { version: '2.5', date: new Date().toISOString(), registros, fixas, configs };
+    const backup = { version: '3.0', date: new Date().toISOString(), registros, fixas, configs };
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `bolso-fred-backup-${new Date().toISOString().split('T')[0]}.json`; a.click(); URL.revokeObjectURL(url);
     showToast('📤 Backup exportado!');
@@ -1178,7 +1234,7 @@ async function importarJSON(e) {
 
 async function exportarCSV() {
     const registros = await dbGetAll('registros'); const sep = csvFormato === 'excel' ? ';' : ',';
-    let filtered = registros; if (!csvTodosMeses) filtered = filtered.filter(r => { const [y, m] = r.data.split('-').map(Number); return y === csvAno && (m - 1) === csvMes; });
+    let filtered = registros; if (!csvTodosMeses) filtered = filtered.filter(r => { const { mes, ano } = getMesAno(r.data); return ano === csvAno && mes === csvMes; });
     filtered.sort((a, b) => a.data.localeCompare(b.data));
     let csv = `Data${sep}Tipo${sep}Descrição${sep}Valor${sep}Categoria${sep}Método${sep}Investimento${sep}Nota\n`;
     filtered.forEach(r => { csv += `${formatDate(r.data)}${sep}${r.tipo}${sep}${r.descricao || ''}${sep}${r.valor.toFixed(2).replace('.', ',')}${sep}${r.categoria ? getCategoriaInfo(r.categoria).label : ''}${sep}${r.metodo ? getMetodoInfo(r.metodo) : ''}${sep}${r.tipoInvestimento ? getInvestimentoInfo(r.tipoInvestimento).label : ''}${sep}${r.nota || ''}\n`; });
@@ -1189,12 +1245,14 @@ async function exportarCSV() {
 
 async function gerarRelatorio() {
     const registros = await dbGetAll('registros');
-    const doMes = registros.filter(r => { const [y, m] = r.data.split('-').map(Number); return y === relatorioAno && (m - 1) === relatorioMes; });
-    let tRec = 0, tGas = 0, tInv = 0, tRes = 0; const gastosPorCat = {};
-    doMes.forEach(r => { if (r.tipo === 'receita') tRec += r.valor; if (r.tipo === 'gasto') { tGas += r.valor; gastosPorCat[r.categoria] = (gastosPorCat[r.categoria] || 0) + r.valor; } if (r.tipo === 'investimento') tInv += r.valor; if (r.tipo === 'resgate') tRes += r.valor; });
-    let txt = `═══════════════════════════════════\n  💰 O BOLSO DO FRED — RELATÓRIO\n  ${getMonthName(relatorioMes)} ${relatorioAno}\n═══════════════════════════════════\n\n📊 RESUMO DO MÊS\n─────────────────────────────\n  💵 Receitas:      ${formatMoney(tRec)}\n  💸 Gastos:        ${formatMoney(tGas)}\n  📈 Investido:     ${formatMoney(tInv)}\n  🔄 Resgates:      ${formatMoney(tRes)}\n─────────────────────────────\n  💰 Saldo:         ${formatMoney(tRec - tGas - tInv + tRes)}\n\n`;
-    if (Object.keys(gastosPorCat).length > 0) { txt += `🥧 GASTOS POR CATEGORIA\n─────────────────────────────\n`; Object.entries(gastosPorCat).sort((a, b) => b[1] - a[1]).forEach(([cat, val]) => { const info = getCategoriaInfo(cat); txt += `  ${info.icon} ${info.label.padEnd(14)} ${formatMoney(val).padStart(12)}  (${((val / tGas) * 100).toFixed(0)}%)\n`; }); txt += `\n`; }
-    txt += `📝 ${doMes.length} movimentações no mês\n═══════════════════════════════════\n`;
+    const doMes = calcularFinancasMes(registros, relatorioMes, relatorioAno);
+    const gastosPorCat = {};
+    registros.filter(r => { const { mes, ano } = getMesAno(r.data); return r.tipo === 'gasto' && ano === relatorioAno && mes === relatorioMes; }).forEach(r => { gastosPorCat[r.categoria] = (gastosPorCat[r.categoria] || 0) + r.valor; });
+    const totalRegs = registros.filter(r => { const { mes, ano } = getMesAno(r.data); return ano === relatorioAno && mes === relatorioMes; }).length;
+
+    let txt = `═══════════════════════════════════\n  💰 O BOLSO DO FRED — RELATÓRIO\n  ${getMonthName(relatorioMes)} ${relatorioAno}\n═══════════════════════════════════\n\n📊 RESUMO DO MÊS\n─────────────────────────────\n  💵 Receitas:      ${formatMoney(doMes.receitas)}\n  💸 Gastos:        ${formatMoney(doMes.gastos)}\n  📈 Investido:     ${formatMoney(doMes.investimentos)}\n  🔄 Resgates:      ${formatMoney(doMes.resgates)}\n─────────────────────────────\n  💰 Saldo:         ${formatMoney(doMes.saldo)}\n\n`;
+    if (Object.keys(gastosPorCat).length > 0) { txt += `🥧 GASTOS POR CATEGORIA\n─────────────────────────────\n`; Object.entries(gastosPorCat).sort((a, b) => b[1] - a[1]).forEach(([cat, val]) => { const info = getCategoriaInfo(cat); txt += `  ${info.icon} ${info.label.padEnd(14)} ${formatMoney(val).padStart(12)}  (${((val / doMes.gastos) * 100).toFixed(0)}%)\n`; }); txt += `\n`; }
+    txt += `📝 ${totalRegs} movimentações no mês\n═══════════════════════════════════\n`;
     document.getElementById('relatorio-texto').textContent = txt;
     document.getElementById('relatorio-output').style.display = '';
 }
@@ -1235,7 +1293,7 @@ async function salvarLembrete() { const titulo = document.getElementById('input-
 async function updateLembretes() { const lembretes = await dbGet('config', 'lembretes'); const lista = lembretes ? lembretes.valor : []; const listEl = document.getElementById('lembretes-list'); if (lista.length === 0) { listEl.innerHTML = '<div class="empty-state"><span class="empty-icon">📝</span><p>Nenhum lembrete</p></div>'; return; } const rm = { nao: 'Uma vez', diario: 'Diário', semanal: 'Semanal', mensal: 'Mensal' }; listEl.innerHTML = lista.map(l => `<div class="lembrete-item"><span class="lembrete-icon">📌</span><div class="lembrete-info"><div class="lembrete-titulo">${l.titulo}</div><div class="lembrete-meta">${formatDate(l.data)} · ${rm[l.repetir] || 'Uma vez'}</div></div><button class="lembrete-delete" data-lembrete-id="${l.id}">✕</button></div>`).join(''); listEl.querySelectorAll('.lembrete-delete').forEach(btn => { btn.addEventListener('click', async () => { const lem = await dbGet('config', 'lembretes'); const nova = (lem ? lem.valor : []).filter(l => l.id !== btn.dataset.lembreteId); await dbPut('config', { chave: 'lembretes', valor: nova }); showToast('🗑️ Lembrete removido'); updateLembretes(); }); }); }
 async function updateHistoricoNotifs() { const hist = await dbGet('config', 'notif-historico'); const lista = hist ? hist.valor : []; const listEl = document.getElementById('notificacoes-historico-list'); if (lista.length === 0) { listEl.innerHTML = '<div class="empty-state"><span class="empty-icon">🔕</span><p>Nenhuma notificação enviada</p></div>'; return; } listEl.innerHTML = lista.slice(-10).reverse().map(n => `<div class="notif-hist-item"><span class="notif-hist-icon">${n.icon || '🔔'}</span><div class="notif-hist-info"><div class="notif-hist-text">${n.texto}</div><div class="notif-hist-time">${n.data || ''}</div></div></div>`).join(''); }
 async function limparHistoricoNotifs() { await dbPut('config', { chave: 'notif-historico', valor: [] }); showToast('🗑️ Histórico limpo'); updateHistoricoNotifs(); }
-async function checkNotifications() { const notifAtivo = await dbGet('config', 'notif-ativo'); if (!notifAtivo || !notifAtivo.valor || Notification.permission !== 'granted') return; const prefs = await dbGet('config', 'notif-prefs'); const p = prefs ? prefs.valor : { fixas: true, metas: true }; const now = new Date(); if (p.fixas !== false) { const fixas = await dbGetAll('fixas'); const registros = await dbGetAll('registros'); const aplicadas = new Set(); registros.forEach(r => { if (r.fixaId) { const [y, m] = r.data.split('-').map(Number); if (y === now.getFullYear() && (m - 1) === now.getMonth()) aplicadas.add(r.fixaId); } }); const pendentes = fixas.filter(f => f.ativa !== false && !aplicadas.has(f.id) && f.dia === now.getDate()); if (pendentes.length > 0) sendNotification('📅 Fixas Pendentes', `${pendentes.length} fixa(s) vencem hoje!`, 'fixas'); } if (p.metas !== false) { const orcConfig = await dbGet('config', 'orcamento-geral'); if (orcConfig && orcConfig.valor > 0) { const registros = await dbGetAll('registros'); let tg = 0; registros.forEach(r => { const [y, m] = r.data.split('-').map(Number); if (r.tipo === 'gasto' && y === now.getFullYear() && (m - 1) === now.getMonth()) tg += r.valor; }); const pct = (tg / orcConfig.valor) * 100; if (pct >= 100) sendNotification('🚨 Orçamento Estourado', `Ultrapassou em ${formatMoney(tg - orcConfig.valor)}!`, 'orc-100'); else if (pct >= 75) sendNotification('⚠️ Alerta', `Já usou ${pct.toFixed(0)}% do orçamento.`, 'orc-75'); } } }
+async function checkNotifications() { const notifAtivo = await dbGet('config', 'notif-ativo'); if (!notifAtivo || !notifAtivo.valor || Notification.permission !== 'granted') return; const prefs = await dbGet('config', 'notif-prefs'); const p = prefs ? prefs.valor : { fixas: true, metas: true }; const now = new Date(); if (p.fixas !== false) { const fixas = await dbGetAll('fixas'); const registros = await dbGetAll('registros'); const pendentes = fixas.filter(f => f.ativa !== false && !fixaJaCumpridaNoMes(registros, f.id, now.getMonth(), now.getFullYear()) && f.dia === now.getDate()); if (pendentes.length > 0) sendNotification('📅 Fixas Pendentes', `${pendentes.length} fixa(s) vencem hoje!`, 'fixas'); } if (p.metas !== false) { const orcConfig = await dbGet('config', 'orcamento-geral'); if (orcConfig && orcConfig.valor > 0) { const registros = await dbGetAll('registros'); const doMes = calcularFinancasMes(registros, now.getMonth(), now.getFullYear()); const pct = (doMes.gastos / orcConfig.valor) * 100; if (pct >= 100) sendNotification('🚨 Orçamento Estourado', `Ultrapassou em ${formatMoney(doMes.gastos - orcConfig.valor)}!`, 'orc-100'); else if (pct >= 75) sendNotification('⚠️ Alerta', `Já usou ${pct.toFixed(0)}% do orçamento.`, 'orc-75'); } } }
 async function sendNotification(title, body, tag) { if ('serviceWorker' in navigator && navigator.serviceWorker.controller) navigator.serviceWorker.controller.postMessage({ type: 'SHOW_NOTIFICATION', payload: { title, body, tag } }); else new Notification(title, { body, icon: './icons/icon-192.png' }); const hist = await dbGet('config', 'notif-historico'); const lista = hist ? hist.valor : []; lista.push({ texto: `${title}: ${body}`, icon: '🔔', data: new Date().toLocaleString('pt-BR') }); await dbPut('config', { chave: 'notif-historico', valor: lista }); }
 
 // ===== SETTINGS =====
