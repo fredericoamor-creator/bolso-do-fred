@@ -1,5 +1,5 @@
 /* ===================================
-   O BOLSO DO FRED — CSS v2.5
+   O BOLSO DO FRED — CSS v3.0
    =================================== */
 
 :root {
@@ -157,6 +157,167 @@ body {
 }
 .pin-key-delete:active {
     background: rgba(255,255,255,0.25);
+}
+
+/* ===== SETUP / ONBOARDING ===== */
+#screen-setup {
+    background: linear-gradient(180deg, #1a5c37 0%, #2d8659 40%, var(--bg-main) 40%);
+    z-index: 9998;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+[data-theme="dark"] #screen-setup {
+    background: linear-gradient(180deg, #0d261a 0%, #1a4a32 40%, var(--bg-main) 40%);
+}
+
+.setup-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    padding: 24px 20px;
+    padding-top: calc(48px + env(safe-area-inset-top, 0px));
+    padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+    max-width: 480px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.setup-header {
+    text-align: center;
+    margin-bottom: 28px;
+}
+
+.setup-icon {
+    font-size: 56px;
+    margin-bottom: 12px;
+    animation: setupBounce 0.6s ease;
+}
+
+@keyframes setupBounce {
+    0% { transform: scale(0); opacity: 0; }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.setup-title {
+    font-size: 28px;
+    font-weight: 800;
+    color: #ffffff;
+    margin-bottom: 8px;
+}
+
+.setup-desc {
+    font-size: 14px;
+    color: rgba(255,255,255,0.85);
+    line-height: 1.5;
+    max-width: 320px;
+    margin: 0 auto;
+}
+
+.setup-card {
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-color);
+    animation: fadeInUp 0.4s ease;
+}
+
+.setup-card:nth-child(3) { animation-delay: 0.1s; }
+.setup-card:nth-child(4) { animation-delay: 0.2s; }
+
+.setup-card-icon {
+    font-size: 32px;
+    margin-bottom: 8px;
+}
+
+.setup-card .form-label {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.setup-hint {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.4;
+    margin-bottom: 12px;
+}
+
+.setup-card .input-valor {
+    font-size: 28px;
+    font-weight: 800;
+    padding: 16px;
+    background: var(--input-bg);
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-md);
+    text-align: center;
+    transition: border-color 0.2s;
+}
+
+.setup-card .input-valor:focus {
+    border-color: var(--green-medium);
+}
+
+.setup-resumo {
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
+    animation: fadeInUp 0.4s ease 0.3s both;
+}
+
+.setup-resumo-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 15px;
+}
+
+.setup-resumo-row span {
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+.setup-resumo-row strong {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--green-medium);
+}
+
+.setup-btn {
+    padding: 18px;
+    font-size: 17px;
+    font-weight: 800;
+    border-radius: var(--radius-lg);
+    margin-bottom: 12px;
+    animation: fadeInUp 0.4s ease 0.4s both;
+}
+
+.btn-setup-pular {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 12px;
+    width: 100%;
+    text-align: center;
+    -webkit-tap-highlight-color: transparent;
+    animation: fadeInUp 0.4s ease 0.5s both;
+    transition: color 0.2s;
+}
+
+.btn-setup-pular:active {
+    color: var(--text-secondary);
 }
 
 /* ===== HEADER DASHBOARD ===== */
@@ -888,6 +1049,8 @@ body {
     .resumo-grid { grid-template-columns: repeat(3, 1fr); gap: 4px; }
     .resumo-valor { font-size: 11px; }
     .mais-grid { grid-template-columns: repeat(2, 1fr); }
+    .setup-title { font-size: 24px; }
+    .setup-card .input-valor { font-size: 22px; }
 }
 
 @media (min-width: 500px) {
