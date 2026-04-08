@@ -71,6 +71,41 @@
     </div>
 </div>
 
+<!-- ===== TELA SETUP INICIAL (ONBOARDING) ===== -->
+<div id="screen-setup" class="screen">
+    <div class="setup-container">
+        <div class="setup-header">
+            <div class="setup-icon">🎉</div>
+            <h1 class="setup-title">Bem-vindo!</h1>
+            <p class="setup-desc">Antes de começar, informe seus saldos atuais para o app calcular tudo certinho desde o início.</p>
+        </div>
+
+        <div class="setup-card">
+            <div class="setup-card-icon">🏦</div>
+            <label class="form-label">Saldo disponível em conta</label>
+            <p class="setup-hint">Quanto você tem hoje em conta corrente, poupança, carteira, etc.</p>
+            <input type="text" inputmode="numeric" id="setup-saldo" class="form-input input-valor" placeholder="0,00">
+        </div>
+
+        <div class="setup-card">
+            <div class="setup-card-icon">📈</div>
+            <label class="form-label">Total já investido</label>
+            <p class="setup-hint">Soma de tudo que já tem em investimentos (CDB, ações, cripto, etc). Se não tem, deixe zerado.</p>
+            <input type="text" inputmode="numeric" id="setup-investido" class="form-input input-valor" placeholder="0,00">
+        </div>
+
+        <div class="setup-resumo" id="setup-resumo">
+            <div class="setup-resumo-row">
+                <span>Patrimônio inicial:</span>
+                <strong id="setup-patrimonio-preview">R$ 0,00</strong>
+            </div>
+        </div>
+
+        <button class="btn-primary setup-btn" id="btn-setup-concluir">🚀 Começar a usar</button>
+        <button class="btn-setup-pular" id="btn-setup-pular">Pular por agora</button>
+    </div>
+</div>
+
 <!-- ===== DASHBOARD ===== -->
 <div id="screen-dashboard" class="screen">
     <div class="header-dashboard">
@@ -439,7 +474,7 @@
             <div class="card-header"><span class="card-title">⚠️ Zona de Perigo</span></div>
             <button class="btn-danger" id="btn-reset-dados">🗑️ Apagar Todos os Dados</button>
         </div>
-        <div class="app-version">O Bolso do Fred v2.5</div>
+        <div class="app-version">O Bolso do Fred v3.0</div>
     </div>
 </div>
 
