@@ -1,6 +1,6 @@
 // =======================================
 // O BOLSO DO FRED — App v3.0
-// Correção completa de lógica financeira
+// Onboarding + Correção de lógica financeira
 // =======================================
 
 // ===== BANCO DE DADOS =====
@@ -178,7 +178,6 @@ function applyMoneyMask(input) {
 }
 
 // ===== CÁLCULO FINANCEIRO CENTRALIZADO =====
-// Toda a lógica de saldos é calculada aqui para evitar inconsistências
 function calcularFinancas(registros, saldoInicial, dataLimite) {
     let receitas = 0, gastos = 0, investimentos = 0, resgates = 0;
 
@@ -192,13 +191,6 @@ function calcularFinancas(registros, saldoInicial, dataLimite) {
         }
     });
 
-    // LÓGICA CORRETA:
-    // Saldo livre = dinheiro disponível na conta
-    //   = saldo_inicial_conta + receitas - gastos - investimentos + resgates
-    // Total investido = dinheiro aplicado
-    //   = saldo_inicial_investido + investimentos - resgates
-    // Patrimônio = tudo que você tem
-    //   = saldo_livre + total_investido
     const saldoLivre = saldoInicial.conta + receitas - gastos - investimentos + resgates;
     const totalInvestido = saldoInicial.investido + investimentos - resgates;
     const patrimonio = saldoLivre + totalInvestido;
@@ -223,8 +215,7 @@ function calcularFinancasMes(registros, mes, ano) {
     return { receitas, gastos, investimentos, resgates, saldo: receitas - gastos - investimentos + resgates };
 }
 
-// ===== VERIFICAÇÃO DE FIXAS (LÓGICA MELHORADA) =====
-// Verifica se uma fixa já foi "cumprida" no mês, independente de mudança de data
+// ===== VERIFICAÇÃO DE FIXAS =====
 function fixaJaCumpridaNoMes(registros, fixaId, mes, ano) {
     return registros.some(r => {
         if (r.fixaId !== fixaId) return false;
@@ -233,7 +224,6 @@ function fixaJaCumpridaNoMes(registros, fixaId, mes, ano) {
     });
 }
 
-// Retorna o registro da fixa no mês (se existir)
 function getRegistroFixaNoMes(registros, fixaId, mes, ano) {
     return registros.find(r => {
         if (r.fixaId !== fixaId) return false;
@@ -254,7 +244,11 @@ function navigateTo(screenId) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     const target = document.getElementById(screenId);
     if (target) { target.classList.add('active'); previousScreen = currentScreen; currentScreen = screenId; }
-    if (authenticated && screenId !== 'screen-pin' && screenId !== 'screen-create-pin') showNav(); else hideNav();
+
+    // Nav visível apenas em telas autenticadas (exceto pin, create-pin e setup)
+    const telasSeNav = ['screen-pin', 'screen-create-pin', 'screen-setup'];
+    if (authenticated && !telasSeNav.includes(screenId)) showNav(); else hideNav();
+
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
     const navMap = { 'screen-dashboard':'dashboard', 'screen-historico':'historico', 'screen-graficos':'graficos', 'screen-mais':'mais' };
     const activeNav = navMap[screenId];
@@ -297,10 +291,17 @@ let pinBuffer = '';
 let createPinBuffer = '';
 let createPinStep = 1;
 let firstPin = '';
+let isNewUser = false; // Flag: primeiro uso (acabou de criar PIN)
 
 async function initPIN() {
     const config = await dbGet('config', 'pin');
-    if (!config) navigateTo('screen-create-pin'); else navigateTo('screen-pin');
+    if (!config) {
+        isNewUser = true; // Não tem PIN = primeiro uso
+        navigateTo('screen-create-pin');
+    } else {
+        isNewUser = false;
+        navigateTo('screen-pin');
+    }
     document.querySelectorAll('#screen-pin .pin-key[data-key]').forEach(key => {
         key.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); handlePinKey(key.dataset.key); });
     });
@@ -325,8 +326,16 @@ function handlePinKey(key) {
             const config = await dbGet('config', 'pin');
             if (config && config.valor === pinBuffer) {
                 PinFeedback.success();
-                errorEl.textContent = ''; authenticated = true; navigateTo('screen-dashboard');
+                errorEl.textContent = ''; authenticated = true;
                 pinBuffer = ''; dots.forEach(d => d.classList.remove('filled', 'error'));
+
+                // Verifica se precisa do setup
+                const setupDone = await dbGet('config', 'setup-completed');
+                if (!setupDone || !setupDone.valor) {
+                    navigateTo('screen-setup');
+                } else {
+                    navigateTo('screen-dashboard');
+                }
             } else {
                 PinFeedback.error();
                 errorEl.textContent = 'PIN incorreto';
@@ -364,7 +373,14 @@ function handleCreatePinKey(key) {
                     createPinBuffer = ''; createPinStep = 1; firstPin = '';
                     dots.forEach(d => d.classList.remove('filled'));
                     subtitle.textContent = 'Crie um PIN de 4 dígitos';
-                    navigateTo('screen-dashboard');
+
+                    // Novo usuário → vai pro setup
+                    if (isNewUser) {
+                        navigateTo('screen-setup');
+                    } else {
+                        // Alterando PIN (veio das configurações)
+                        navigateTo('screen-dashboard');
+                    }
                 } else {
                     PinFeedback.error();
                     errorEl.textContent = 'PINs não coincidem. Tente novamente.';
@@ -374,6 +390,62 @@ function handleCreatePinKey(key) {
             }
         }, 200);
     }
+}
+
+// ===== SETUP / ONBOARDING =====
+function initSetup() {
+    const inputSaldo = document.getElementById('setup-saldo');
+    const inputInvestido = document.getElementById('setup-investido');
+    const previewEl = document.getElementById('setup-patrimonio-preview');
+
+    applyMoneyMask(inputSaldo);
+    applyMoneyMask(inputInvestido);
+
+    // Preview em tempo real
+    function updateSetupPreview() {
+        const saldo = parseMoney(inputSaldo.value);
+        const investido = parseMoney(inputInvestido.value);
+        const total = saldo + investido;
+        previewEl.textContent = formatMoney(total);
+    }
+
+    inputSaldo.addEventListener('input', updateSetupPreview);
+    inputInvestido.addEventListener('input', updateSetupPreview);
+
+    // Botão "Começar a usar"
+    document.getElementById('btn-setup-concluir').addEventListener('click', async () => {
+        const conta = parseMoney(inputSaldo.value);
+        const investido = parseMoney(inputInvestido.value);
+
+        // Salva saldo inicial
+        await dbPut('config', { chave: 'saldo-inicial', valor: { conta, investido } });
+
+        // Marca setup como concluído
+        await dbPut('config', { chave: 'setup-completed', valor: true });
+
+        isNewUser = false;
+
+        if (conta > 0 || investido > 0) {
+            showToast('🎉 Tudo pronto! Patrimônio: ' + formatMoney(conta + investido));
+        } else {
+            showToast('🎉 Tudo pronto! Vamos começar!');
+        }
+
+        navigateTo('screen-dashboard');
+    });
+
+    // Botão "Pular por agora"
+    document.getElementById('btn-setup-pular').addEventListener('click', async () => {
+        // Salva com zeros
+        await dbPut('config', { chave: 'saldo-inicial', valor: { conta: 0, investido: 0 } });
+
+        // Marca setup como concluído (não vai perguntar de novo)
+        await dbPut('config', { chave: 'setup-completed', valor: true });
+
+        isNewUser = false;
+        showToast('👍 Você pode configurar depois em ⚙️ Configurações');
+        navigateTo('screen-dashboard');
+    });
 }
 
 // ===== SALDO INICIAL =====
@@ -416,7 +488,7 @@ function updateSaldoInicialStatus(conta, investido) {
     }
 }
 
-// ===== DASHBOARD (LÓGICA CORRIGIDA) =====
+// ===== DASHBOARD =====
 async function updateDashboard() {
     const registros = await dbGetAll('registros');
     const saldoInicial = await getSaldoInicial();
@@ -426,10 +498,7 @@ async function updateDashboard() {
     const hoje = getHojeString();
     document.getElementById('mes-atual').textContent = getMonthName(mesAtual);
 
-    // Cálculo global (até hoje) usando função centralizada
     const global = calcularFinancas(registros, saldoInicial, hoje);
-
-    // Cálculo do mês atual
     const doMes = calcularFinancasMes(registros, mesAtual, anoAtual);
 
     document.getElementById('patrimonio-total').textContent = formatMoney(global.patrimonio);
@@ -532,7 +601,6 @@ async function salvarRegistro() {
     else if (tipoRegistro === 'receita') { reg.metodo = metodoSelecionado; }
     else if (tipoRegistro === 'investimento' || tipoRegistro === 'resgate') { reg.tipoInvestimento = document.getElementById('select-tipo-investimento').value; }
 
-    // Preservar fixaId e fixaRecorrente se estiver editando um registro de fixa
     if (editingId) {
         const existing = await dbGet('registros', editingId);
         if (existing && existing.fixaId) {
@@ -746,7 +814,7 @@ async function updateOrcamentoPreview(totalGastosMes) {
     previewEl.innerHTML = metasAtivas.slice(0, 3).map(([cat, meta]) => { const info = getCategoriaInfo(cat); const g = gastosPorCat[cat] || 0; const pct = Math.min((g / meta) * 100, 100); const lv = pct >= 100 ? 'danger' : pct >= 75 ? 'warning' : 'safe'; return `<div class="meta-preview-item"><span class="meta-preview-icon">${info.icon}</span><div class="meta-preview-info"><div class="meta-preview-name">${info.label}</div><div class="meta-preview-bar"><div class="meta-preview-fill ${lv}" style="width:${pct}%"></div></div></div><span class="meta-preview-valor">${formatMoney(g)}</span></div>`; }).join('');
 }
 
-// ===== FIXAS (LÓGICA MELHORADA) =====
+// ===== FIXAS =====
 let filtroFixaTipo = 'todos', editingFixaId = null, currentFixaDetalheId = null;
 
 function initFixas() {
@@ -816,8 +884,6 @@ async function salvarFixa() {
     if (currentScreen === 'screen-dashboard') await updateDashboard();
 }
 
-// GERAÇÃO DE RECORRENTES (MELHORADA)
-// Agora verifica por fixaId + mês/ano, não depende do dia exato
 async function gerarRegistrosRecorrentes(fixa, meses = 12) {
     const now = new Date();
     const registros = await dbGetAll('registros');
@@ -826,7 +892,6 @@ async function gerarRegistrosRecorrentes(fixa, meses = 12) {
         const mes = (now.getMonth() + i) % 12;
         const ano = now.getFullYear() + Math.floor((now.getMonth() + i) / 12);
 
-        // Verifica se já existe registro dessa fixa nesse mês (qualquer dia)
         if (fixaJaCumpridaNoMes(registros, fixa.id, mes, ano)) continue;
 
         const diasNoMes = new Date(ano, mes + 1, 0).getDate();
@@ -908,7 +973,6 @@ async function openFixaDetalhe(id) {
 async function editarFixa() { if (!currentFixaDetalheId) return; const f = await dbGet('fixas', currentFixaDetalheId); closeFixaDetalhe(); if (f) openFixaModal(f); }
 async function excluirFixa() {
     if (!currentFixaDetalheId) return;
-    // Remove TODOS os registros dessa fixa (passados e futuros)
     const registros = await dbGetAll('registros');
     for (const r of registros) { if (r.fixaId === currentFixaDetalheId && r.fixaRecorrente) await dbDelete('registros', r.id); }
     await dbDelete('fixas', currentFixaDetalheId);
@@ -921,7 +985,6 @@ async function updateFixas() {
     const now = new Date(); const mesAtual = now.getMonth(); const anoAtual = now.getFullYear();
     const registros = await dbGetAll('registros');
 
-    // Usa a função centralizada para verificar se fixa foi cumprida
     const aplicadasSet = new Set();
     fixas.forEach(f => {
         if (fixaJaCumpridaNoMes(registros, f.id, mesAtual, anoAtual)) {
@@ -964,7 +1027,7 @@ async function updateFixasPendentes() {
     document.getElementById('fixas-pendentes-list').querySelectorAll('.fixa-pend-item').forEach(el => { el.addEventListener('click', async () => { const fx = fixas.find(f => f.id === el.dataset.id); if (fx) { await aplicarFixaIndividual(fx); showToast(`✅ "${fx.descricao}" aplicada!`); await updateFixasPendentes(); await updateDashboard(); } }); });
 }
 
-// ===== GRÁFICOS (LÓGICA CORRIGIDA) =====
+// ===== GRÁFICOS =====
 let graficoMes = new Date().getMonth(), graficoAno = new Date().getFullYear();
 
 function initGraficos() {
@@ -1063,7 +1126,6 @@ async function updateProjecao(registros) {
 
     let recFixas = 0, gasFixas = 0, invFixas = 0;
     fixasAtivas.forEach(f => { if (f.tipo === 'receita') recFixas += f.valor; if (f.tipo === 'gasto') gasFixas += f.valor; if (f.tipo === 'investimento') invFixas += f.valor; });
-    // Saldo fixo mensal = receitas - gastos (investimentos não reduzem patrimônio, só movem entre contas)
     const saldoFixoMensal = recFixas - gasFixas;
 
     const projecao = [];
@@ -1207,7 +1269,7 @@ async function updateDadosScreen() {
 
 async function exportarJSON() {
     const registros = await dbGetAll('registros'); const fixas = await dbGetAll('fixas'); const configs = {};
-    try { for (const k of ['pin', 'orcamento-geral', 'metas-categorias', 'theme', 'saldo-inicial', 'categorias-custom']) { const c = await dbGet('config', k); if (c) configs[k] = c; } } catch (e) { }
+    try { for (const k of ['pin', 'orcamento-geral', 'metas-categorias', 'theme', 'saldo-inicial', 'categorias-custom', 'setup-completed']) { const c = await dbGet('config', k); if (c) configs[k] = c; } } catch (e) { }
     const backup = { version: '3.0', date: new Date().toISOString(), registros, fixas, configs };
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `bolso-fred-backup-${new Date().toISOString().split('T')[0]}.json`; a.click(); URL.revokeObjectURL(url);
@@ -1299,6 +1361,7 @@ async function sendNotification(title, body, tag) { if ('serviceWorker' in navig
 // ===== SETTINGS =====
 function initSettings() {
     document.getElementById('btn-alterar-pin').addEventListener('click', () => {
+        isNewUser = false; // Alterando PIN, não é novo usuário
         createPinStep = 1; firstPin = ''; createPinBuffer = '';
         document.querySelectorAll('#create-pin-dots .dot').forEach(d => d.classList.remove('filled'));
         document.getElementById('create-pin-subtitle').textContent = 'Crie um novo PIN';
@@ -1307,7 +1370,16 @@ function initSettings() {
     document.getElementById('btn-reset-dados').addEventListener('click', () => {
         pendingDeleteId = 'RESET';
         document.getElementById('confirm-text').textContent = '⚠️ Apagar TODOS os dados? Esta ação não pode ser desfeita!';
-        document.getElementById('confirm-delete').onclick = async () => { await dbClear('registros'); await dbClear('fixas'); await dbClear('config'); closeConfirmModal(); showToast('🗑️ Dados apagados'); authenticated = false; navigateTo('screen-create-pin'); };
+        document.getElementById('confirm-delete').onclick = async () => {
+            await dbClear('registros');
+            await dbClear('fixas');
+            await dbClear('config');
+            closeConfirmModal();
+            showToast('🗑️ Dados apagados');
+            authenticated = false;
+            isNewUser = true;
+            navigateTo('screen-create-pin');
+        };
         document.getElementById('modal-confirm-overlay').classList.add('open');
     });
 }
@@ -1343,7 +1415,7 @@ async function init() {
     await populateCategoriaSelects();
     initNavigation(); initFormulario(); initModals(); initHistorico(); initGraficos();
     initMetas(); initFixas(); initDados(); initNotificacoes(); initSettings();
-    initSaldoInicial(); initCategorias();
+    initSaldoInicial(); initCategorias(); initSetup();
     initServiceWorkerMessages();
     await initPIN();
     handleURLParams();
